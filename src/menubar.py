@@ -1,10 +1,10 @@
 """macOS menubar app for overtime tracking using rumps."""
 
-import os
 import sys
 import subprocess
 import webbrowser
 from datetime import date, datetime
+from pathlib import Path
 
 import rumps
 
@@ -84,13 +84,13 @@ class OvertimeTrackerApp(rumps.App):
     def open_dashboard(self, _):
         """Launch dashboard subprocess and open browser."""
         if self.dashboard_proc is None or self.dashboard_proc.poll() is not None:
-            dashboard_script = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)), "dashboard.py"
-            )
+            project_root = Path(__file__).resolve().parent.parent
+            log_path = config.db_path.parent / "dashboard.log"
             self.dashboard_proc = subprocess.Popen(
-                [sys.executable, dashboard_script],
+                [sys.executable, "-m", "src.dashboard"],
+                cwd=str(project_root),
                 stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
+                stderr=open(log_path, "a"),
             )
         webbrowser.open(f"http://localhost:{config.dashboard_port}")
 

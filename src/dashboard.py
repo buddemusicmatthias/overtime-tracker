@@ -290,6 +290,7 @@ def main():
     """Run the dashboard as a standalone NiceGUI app."""
     ui.run(
         port=config.dashboard_port,
+        host="127.0.0.1",
         title="Overtime Tracker",
         reload=False,
         show=False,
