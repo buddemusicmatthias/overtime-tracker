@@ -15,6 +15,25 @@ macOS menubar app that tracks overtime hours automatically. Detects active app, 
 - Subprocess: NiceGUI dashboard (launched on demand, port 8080)
 - Both share SQLite DB via WAL mode for concurrent read/write
 
+## Running the App
+
+```bash
+# 1. Setup (einmalig)
+python3 -m venv venv
+venv/bin/pip install -r requirements.txt
+
+# 2a. Manuell starten (aus Projekt-Root)
+venv/bin/python -m src.main
+
+# 2b. Als LaunchAgent installieren (Autostart beim Login)
+./scripts/install.sh
+
+# LaunchAgent verwalten
+launchctl list | grep overtime          # Status prüfen
+launchctl unload ~/Library/LaunchAgents/com.matthias.overtime-tracker.plist  # Stoppen
+tail -f /tmp/overtime-tracker.stderr.log  # Logs ansehen
+```
+
 ## Conventions
 - Dependencies: requirements.txt
 - Source code: src/
