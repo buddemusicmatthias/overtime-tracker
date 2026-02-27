@@ -1,0 +1,249 @@
+import sqlite3
+from datetime import datetime, date
+
+from src.config import config
+from src.models import ActivityRecord, DailySummary, AppSummary
+
+SCHEMA_SQL = """
+CREATE TABLE IF NOT EXISTS activity_log (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp      TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%S','now','localtime')),
+    app_name       TEXT NOT NULL,
+    bundle_id      TEXT,
+    is_idle        INTEGER NOT NULL DEFAULT 0,
+    idle_seconds   REAL,
+    poll_interval  INTEGER NOT NULL DEFAULT 15
+);
+
+CREATE TABLE IF NOT EXISTS daily_summary (
+    date                  TEXT PRIMARY KEY,
+    day_of_week           INTEGER NOT NULL,
+    total_active_minutes  REAL NOT NULL DEFAULT 0,
+    total_idle_minutes    REAL NOT NULL DEFAULT 0,
+    overtime_minutes      REAL NOT NULL DEFAULT 0,
+    first_activity        TEXT,
+    last_activity         TEXT,
+    work_category         TEXT NOT NULL DEFAULT 'regular'
+);
+
+CREATE TABLE IF NOT EXISTS app_daily_summary (
+    date           TEXT NOT NULL,
+    app_name       TEXT NOT NULL,
+    active_minutes REAL NOT NULL DEFAULT 0,
+    PRIMARY KEY (date, app_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_activity_timestamp ON activity_log(timestamp);
+"""
+
+
+def get_connection() -> sqlite3.Connection:
+    """Create a new SQLite connection with WAL mode enabled."""
+    config.db_path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(config.db_path))
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=5000")
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+def init_db():
+    """Initialize database schema."""
+    conn = get_connection()
+    conn.executescript(SCHEMA_SQL)
+    conn.close()
+
+
+def log_activity(record: ActivityRecord):
+    """Insert a single activity record."""
+    conn = get_connection()
+    conn.execute(
+        """INSERT INTO activity_log (timestamp, app_name, bundle_id, is_idle, idle_seconds, poll_interval)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (
+            record.timestamp.strftime("%Y-%m-%dT%H:%M:%S"),
+            record.app_name,
+            record.bundle_id,
+            int(record.is_idle),
+            record.idle_seconds,
+            record.poll_interval,
+        ),
+    )
+    conn.commit()
+    conn.close()
+
+
+def update_daily_summaries(target_date: str | None = None):
+    """Recompute daily_summary and app_daily_summary for a given date (default: today)."""
+    if target_date is None:
+        target_date = date.today().isoformat()
+
+    conn = get_connection()
+
+    # Compute totals from raw activity_log
+    row = conn.execute(
+        """SELECT
+            COUNT(CASE WHEN is_idle = 0 THEN 1 END) as active_polls,
+            COUNT(CASE WHEN is_idle = 1 THEN 1 END) as idle_polls,
+            MIN(time(timestamp)) as first_activity,
+            MAX(time(timestamp)) as last_activity,
+            AVG(poll_interval) as avg_interval
+        FROM activity_log
+        WHERE date(timestamp) = ?""",
+        (target_date,),
+    ).fetchone()
+
+    if row is None or (row["active_polls"] == 0 and row["idle_polls"] == 0):
+        conn.close()
+        return
+
+    avg_interval = row["avg_interval"] or config.polling_interval_seconds
+    active_minutes = (row["active_polls"] * avg_interval) / 60
+    idle_minutes = (row["idle_polls"] * avg_interval) / 60
+
+    # Compute overtime: count active polls outside core hours
+    dt = datetime.strptime(target_date, "%Y-%m-%d")
+    weekday = dt.weekday()
+    category = config.get_work_category(weekday, 12)  # day-level category
+
+    # For overtime calculation, count active polls outside core hours
+    overtime_row = conn.execute(
+        """SELECT COUNT(*) as cnt FROM activity_log
+        WHERE date(timestamp) = ? AND is_idle = 0
+        AND (CAST(strftime('%H', timestamp) AS INTEGER) < ?
+             OR CAST(strftime('%H', timestamp) AS INTEGER) >= ?)""",
+        (target_date, config.schedule.core_start_hour, config.schedule.core_end_hour),
+    ).fetchone()
+
+    # On weekends/Friday, all active time is overtime/friday
+    if category in ("overtime", "friday"):
+        overtime_minutes = active_minutes
+    else:
+        overtime_minutes = (overtime_row["cnt"] * avg_interval) / 60
+
+    conn.execute(
+        """INSERT OR REPLACE INTO daily_summary
+        (date, day_of_week, total_active_minutes, total_idle_minutes,
+         overtime_minutes, first_activity, last_activity, work_category)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (
+            target_date, weekday, active_minutes, idle_minutes,
+            overtime_minutes, row["first_activity"], row["last_activity"],
+            category,
+        ),
+    )
+
+    # Update per-app summaries
+    app_rows = conn.execute(
+        """SELECT app_name, COUNT(*) as polls, AVG(poll_interval) as avg_int
+        FROM activity_log
+        WHERE date(timestamp) = ? AND is_idle = 0
+        GROUP BY app_name""",
+        (target_date,),
+    ).fetchall()
+
+    for app_row in app_rows:
+        app_minutes = (app_row["polls"] * (app_row["avg_int"] or avg_interval)) / 60
+        conn.execute(
+            """INSERT OR REPLACE INTO app_daily_summary (date, app_name, active_minutes)
+            VALUES (?, ?, ?)""",
+            (target_date, app_row["app_name"], app_minutes),
+        )
+
+    conn.commit()
+    conn.close()
+
+
+def get_daily_summary(target_date: str) -> DailySummary | None:
+    """Get the daily summary for a given date."""
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT * FROM daily_summary WHERE date = ?", (target_date,)
+    ).fetchone()
+    conn.close()
+    if row is None:
+        return None
+    return DailySummary(
+        date=row["date"],
+        day_of_week=row["day_of_week"],
+        total_active_minutes=row["total_active_minutes"],
+        total_idle_minutes=row["total_idle_minutes"],
+        overtime_minutes=row["overtime_minutes"],
+        first_activity=row["first_activity"],
+        last_activity=row["last_activity"],
+        work_category=row["work_category"],
+    )
+
+
+def get_week_summaries(iso_year: int, iso_week: int) -> list[DailySummary]:
+    """Get all daily summaries for a given ISO week."""
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT * FROM daily_summary
+        WHERE strftime('%G', date) = ? AND strftime('%V', date) = ?
+        ORDER BY date""",
+        (str(iso_year), f"{iso_week:02d}"),
+    ).fetchall()
+    conn.close()
+    return [
+        DailySummary(
+            date=r["date"], day_of_week=r["day_of_week"],
+            total_active_minutes=r["total_active_minutes"],
+            total_idle_minutes=r["total_idle_minutes"],
+            overtime_minutes=r["overtime_minutes"],
+            first_activity=r["first_activity"], last_activity=r["last_activity"],
+            work_category=r["work_category"],
+        )
+        for r in rows
+    ]
+
+
+def get_app_summaries(target_date: str) -> list[AppSummary]:
+    """Get per-app breakdown for a given date."""
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT * FROM app_daily_summary WHERE date = ? ORDER BY active_minutes DESC""",
+        (target_date,),
+    ).fetchall()
+    conn.close()
+    return [
+        AppSummary(date=r["date"], app_name=r["app_name"], active_minutes=r["active_minutes"])
+        for r in rows
+    ]
+
+
+def get_monthly_summaries(year: int, month: int) -> list[DailySummary]:
+    """Get all daily summaries for a given month."""
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT * FROM daily_summary
+        WHERE strftime('%Y', date) = ? AND strftime('%m', date) = ?
+        ORDER BY date""",
+        (str(year), f"{month:02d}"),
+    ).fetchall()
+    conn.close()
+    return [
+        DailySummary(
+            date=r["date"], day_of_week=r["day_of_week"],
+            total_active_minutes=r["total_active_minutes"],
+            total_idle_minutes=r["total_idle_minutes"],
+            overtime_minutes=r["overtime_minutes"],
+            first_activity=r["first_activity"], last_activity=r["last_activity"],
+            work_category=r["work_category"],
+        )
+        for r in rows
+    ]
+
+
+def export_csv(start_date: str, end_date: str) -> list[dict]:
+    """Export raw activity data as list of dicts for CSV generation."""
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT timestamp, app_name, bundle_id, is_idle, idle_seconds, poll_interval
+        FROM activity_log
+        WHERE date(timestamp) BETWEEN ? AND ?
+        ORDER BY timestamp""",
+        (start_date, end_date),
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
