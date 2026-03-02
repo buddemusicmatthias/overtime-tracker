@@ -295,12 +295,15 @@ Die SwiftUI-App muss diese SQLite-Tabellen lesen können:
 - [x] Python-Daemon liest Config (Kernzeiten, Arbeitstage, Idle-Timeout) aus SQLite via `reload_from_db()`
 - [x] Schema-Migration via `PRAGMA user_version` für bestehende DBs
 
-### Phase 1: Swift-Grundgerüst
+### Phase 1: Swift-Grundgerüst — ERLEDIGT
 
-- Xcode-Projekt erstellen (macOS App, SwiftUI)
-- SQLite-Lesezugriff via GRDB.swift (empfohlen wegen DB-Observation)
-- Menüleisten-Icon mit Overtime-Anzeige
-- Basis-Popover mit Dummy-Daten
+- [x] Xcode-Projekt erstellen (macOS App, SwiftUI, GRDB.swift Dependency)
+- [x] LSUIElement = true (kein Dock-Icon), App Sandbox deaktiviert
+- [x] SQLite-Lesezugriff via GRDB.swift (read-only DatabasePool, WAL-Modus)
+- [x] Menüleisten-Icon mit Overtime-Anzeige (`NSStatusItem` zeigt `X:XX OT`)
+- [x] Popover mit Live-Daten (GRDB `ValueObservation` async streams)
+- [x] Models: `DailySummary`, `AppDailySummary`, `TrackerSettings` (GRDB FetchableRecord + Decodable)
+- [x] GRDB-dynamic Dependency entfernt (nur statische GRDB Library nötig)
 
 ### Phase 2: Popover mit Live-Daten
 
