@@ -28,7 +28,6 @@ DAY_NAMES = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
 CATEGORY_COLORS = {
     "regular": "#4CAF50",
     "overtime": "#F44336",
-    "friday": "#FF9800",
 }
 
 
@@ -142,7 +141,7 @@ def build_week_view():
         _metric_card("Total Active", format_minutes(total_active), "bg-blue-100")
         _metric_card("Total Overtime", format_minutes(total_overtime), "bg-red-100")
         _metric_card(
-            "vs Target (32h)",
+            f"vs Target ({config.schedule.weekly_target_hours}h)",
             f"{'+' if total_active > target_minutes else ''}{format_minutes(total_active - target_minutes)}",
             "bg-yellow-100",
         )

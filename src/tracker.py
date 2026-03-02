@@ -54,3 +54,4 @@ def poll_and_log():
     if poll_and_log._counter >= 20:
         poll_and_log._counter = 0
         update_daily_summaries()
+        config.reload_from_db()

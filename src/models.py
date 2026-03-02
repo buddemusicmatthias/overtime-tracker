@@ -23,7 +23,7 @@ class DailySummary:
     overtime_minutes: float
     first_activity: str | None   # HH:MM:SS
     last_activity: str | None    # HH:MM:SS
-    work_category: str           # regular/overtime/friday
+    work_category: str           # regular/overtime
 
 
 @dataclass
@@ -32,3 +32,5 @@ class AppSummary:
     date: str
     app_name: str
     active_minutes: float
+    regular_minutes: float = 0.0
+    overtime_minutes: float = 0.0

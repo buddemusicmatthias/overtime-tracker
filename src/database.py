@@ -29,14 +29,53 @@ CREATE TABLE IF NOT EXISTS daily_summary (
 );
 
 CREATE TABLE IF NOT EXISTS app_daily_summary (
-    date           TEXT NOT NULL,
-    app_name       TEXT NOT NULL,
-    active_minutes REAL NOT NULL DEFAULT 0,
+    date              TEXT NOT NULL,
+    app_name          TEXT NOT NULL,
+    active_minutes    REAL NOT NULL DEFAULT 0,
+    regular_minutes   REAL NOT NULL DEFAULT 0,
+    overtime_minutes  REAL NOT NULL DEFAULT 0,
     PRIMARY KEY (date, app_name)
+);
+
+CREATE TABLE IF NOT EXISTS settings (
+    id                   INTEGER PRIMARY KEY CHECK (id = 1),
+    core_start_hour      INTEGER NOT NULL DEFAULT 9,
+    core_end_hour        INTEGER NOT NULL DEFAULT 18,
+    work_days            TEXT NOT NULL DEFAULT '0,1,2,3',
+    idle_timeout_seconds INTEGER NOT NULL DEFAULT 600
 );
 
 CREATE INDEX IF NOT EXISTS idx_activity_timestamp ON activity_log(timestamp);
 """
+
+SCHEMA_VERSION = 1
+
+# Each migration brings the DB from (version - 1) to version.
+# Statements use try/except individually so fresh installs (where SCHEMA_SQL
+# already created the full schema) skip gracefully.
+MIGRATIONS: dict[int, list[str]] = {
+    1: [
+        "ALTER TABLE app_daily_summary ADD COLUMN regular_minutes REAL NOT NULL DEFAULT 0",
+        "ALTER TABLE app_daily_summary ADD COLUMN overtime_minutes REAL NOT NULL DEFAULT 0",
+    ],
+}
+
+
+def _migrate(conn: sqlite3.Connection):
+    """Apply pending schema migrations using PRAGMA user_version."""
+    current = conn.execute("PRAGMA user_version").fetchone()[0]
+    if current >= SCHEMA_VERSION:
+        return
+    for version in sorted(MIGRATIONS.keys()):
+        if version <= current:
+            continue
+        for sql in MIGRATIONS[version]:
+            try:
+                conn.execute(sql)
+            except sqlite3.OperationalError:
+                pass  # Column/table already exists (fresh install)
+    conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+    conn.commit()
 
 
 @contextmanager
@@ -54,9 +93,16 @@ def get_connection() -> Iterator[sqlite3.Connection]:
 
 
 def init_db():
-    """Initialize database schema."""
+    """Initialize database schema, run migrations, and seed default settings."""
     with get_connection() as conn:
         conn.executescript(SCHEMA_SQL)
+        _migrate(conn)
+        # Seed default settings row if missing
+        conn.execute(
+            "INSERT OR IGNORE INTO settings (id) VALUES (1)"
+        )
+        conn.commit()
+    config.reload_from_db()
 
 
 def log_activity(record: ActivityRecord):
@@ -117,8 +163,8 @@ def update_daily_summaries(target_date: str | None = None):
             (target_date, config.schedule.core_start_hour, config.schedule.core_end_hour),
         ).fetchone()
 
-        # On weekends/Friday, all active time is overtime/friday
-        if category in ("overtime", "friday"):
+        # On non-work days, all active time is overtime
+        if category == "overtime":
             overtime_minutes = active_minutes
         else:
             overtime_minutes = (overtime_row["cnt"] * avg_interval) / 60
@@ -135,21 +181,35 @@ def update_daily_summaries(target_date: str | None = None):
             ),
         )
 
-        # Update per-app summaries
+        # Update per-app summaries with regular/overtime split
+        is_work_day = weekday in config.schedule.work_days
         app_rows = conn.execute(
-            """SELECT app_name, COUNT(*) as polls, AVG(poll_interval) as avg_int
+            """SELECT app_name,
+                COUNT(*) as polls,
+                AVG(poll_interval) as avg_int,
+                COUNT(CASE WHEN CAST(strftime('%H', timestamp) AS INTEGER) >= ?
+                          AND CAST(strftime('%H', timestamp) AS INTEGER) < ?
+                     THEN 1 END) as core_polls
             FROM activity_log
             WHERE date(timestamp) = ? AND is_idle = 0
             GROUP BY app_name""",
-            (target_date,),
+            (config.schedule.core_start_hour, config.schedule.core_end_hour, target_date),
         ).fetchall()
 
         for app_row in app_rows:
-            app_minutes = (app_row["polls"] * (app_row["avg_int"] or avg_interval)) / 60
+            ai = app_row["avg_int"] or avg_interval
+            app_total = (app_row["polls"] * ai) / 60
+            if is_work_day:
+                app_regular = (app_row["core_polls"] * ai) / 60
+                app_overtime = app_total - app_regular
+            else:
+                app_regular = 0.0
+                app_overtime = app_total
             conn.execute(
-                """INSERT OR REPLACE INTO app_daily_summary (date, app_name, active_minutes)
-                VALUES (?, ?, ?)""",
-                (target_date, app_row["app_name"], app_minutes),
+                """INSERT OR REPLACE INTO app_daily_summary
+                (date, app_name, active_minutes, regular_minutes, overtime_minutes)
+                VALUES (?, ?, ?, ?, ?)""",
+                (target_date, app_row["app_name"], app_total, app_regular, app_overtime),
             )
 
         conn.commit()
@@ -205,7 +265,13 @@ def get_app_summaries(target_date: str) -> list[AppSummary]:
             (target_date,),
         ).fetchall()
     return [
-        AppSummary(date=r["date"], app_name=r["app_name"], active_minutes=r["active_minutes"])
+        AppSummary(
+            date=r["date"],
+            app_name=r["app_name"],
+            active_minutes=r["active_minutes"],
+            regular_minutes=r["regular_minutes"],
+            overtime_minutes=r["overtime_minutes"],
+        )
         for r in rows
     ]
 
