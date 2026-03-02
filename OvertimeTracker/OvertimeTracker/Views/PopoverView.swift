@@ -4,109 +4,112 @@ struct PopoverView: View {
     var viewModel: PopoverViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            header
-            statsGrid
-            if !viewModel.topApps.isEmpty {
-                topAppsSection
-            }
-            Spacer()
-            footer
+        VStack(alignment: .leading, spacing: 0) {
+            todaySection
+            Divider().padding(.vertical, 10)
+            weekSection
+            Divider().padding(.vertical, 10)
+            actionButtons
         }
         .padding(16)
-        .frame(width: 320, height: 380)
+        .frame(width: 320, height: 460)
         .background(Color(nsColor: .windowBackgroundColor))
         .preferredColorScheme(.dark)
     }
 
-    // MARK: - Header
+    // MARK: - Today Section
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text("Overtime Tracker")
-                .font(.headline)
-            Text(viewModel.todayFormatted)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+    private var todaySection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(viewModel.todayHeaderText)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundStyle(Color.otGray)
+                .tracking(0.5)
+
+            HStack(spacing: 8) {
+                StatCard(title: "Aktiv", value: viewModel.activeText, accentColor: .otBlue)
+                StatCard(title: "Overtime", value: viewModel.overtimeText, accentColor: .otRed)
+                StatCard(title: "Idle", value: viewModel.idleText, accentColor: .otGray)
+            }
+
+            activityRow
         }
     }
 
-    // MARK: - Stats Grid
-
-    private var statsGrid: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 8) {
-                StatCard(
-                    title: "Overtime",
-                    value: viewModel.overtimeText
-                )
-                StatCard(
-                    title: "Active",
-                    value: viewModel.activeText
-                )
-            }
-            HStack(spacing: 8) {
-                StatCard(
-                    title: "Start",
-                    value: viewModel.firstActivityText
-                )
-                StatCard(
-                    title: "End",
-                    value: viewModel.lastActivityText
-                )
-            }
-            StatCard(
-                title: "Idle Time",
-                value: viewModel.idleText
-            )
-        }
-    }
-
-    // MARK: - Top Apps
-
-    private var topAppsSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Top Apps")
+    private var activityRow: some View {
+        HStack {
+            Text("Erste / letzte Akt.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            ForEach(viewModel.topApps, id: \.appName) { app in
-                HStack {
-                    Text(app.appName)
-                        .font(.caption)
-                        .lineLimit(1)
-                    Spacer()
-                    Text(Self.formatMinutes(app.activeMinutes))
-                        .font(.caption.monospaced())
-                        .foregroundStyle(.secondary)
-                }
+            Spacer()
+            Text("\(viewModel.firstActivityText) – \(viewModel.lastActivityText)")
+                .font(.caption.monospaced())
+                .foregroundStyle(Color.otGreen)
+        }
+    }
+
+    // MARK: - Week Section
+
+    private var weekSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(viewModel.calendarWeekText)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundStyle(Color.otGray)
+                .tracking(0.5)
+
+            WeekBarChart(summaries: viewModel.weekSummaries)
+
+            HStack(spacing: 8) {
+                StatCard(title: "Aktiv", value: viewModel.weekActiveText, accentColor: .otBlue)
+                StatCard(title: "Overtime", value: viewModel.weekOvertimeText, accentColor: .otRed)
             }
         }
     }
 
-    // MARK: - Footer
+    // MARK: - Action Buttons
 
-    private var footer: some View {
-        HStack {
+    private var actionButtons: some View {
+        VStack(spacing: 8) {
+            Button {
+                print("[Stub] Dashboard öffnen")
+            } label: {
+                Text("Dashboard öffnen")
+                    .font(.subheadline.weight(.medium))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(.otBlue)
+
+            HStack(spacing: 8) {
+                Button {
+                    print("[Stub] Tracking pausieren")
+                } label: {
+                    Text("Tracking pausieren")
+                        .font(.caption)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                }
+                .buttonStyle(.bordered)
+
+                Button {
+                    print("[Stub] Einstellungen")
+                } label: {
+                    Text("Einstellungen")
+                        .font(.caption)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                }
+                .buttonStyle(.bordered)
+            }
+
             if !viewModel.isConnected {
-                Label("DB not found", systemImage: "exclamationmark.triangle")
-                    .font(.caption)
+                Label("DB nicht gefunden", systemImage: "exclamationmark.triangle")
+                    .font(.caption2)
                     .foregroundStyle(.orange)
             }
-            Spacer()
-            Button("Quit") {
-                NSApplication.shared.terminate(nil)
-            }
-            .buttonStyle(.plain)
-            .font(.caption)
-            .foregroundStyle(.secondary)
         }
-    }
-
-    // MARK: - Helpers
-
-    private static func formatMinutes(_ minutes: Double) -> String {
-        let h = Int(minutes) / 60
-        let m = Int(minutes) % 60
-        return String(format: "%d:%02d", h, m)
     }
 }

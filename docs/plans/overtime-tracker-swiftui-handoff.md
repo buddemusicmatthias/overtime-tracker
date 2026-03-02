@@ -305,11 +305,15 @@ Die SwiftUI-App muss diese SQLite-Tabellen lesen können:
 - [x] Models: `DailySummary`, `AppDailySummary`, `TrackerSettings` (GRDB FetchableRecord + Decodable)
 - [x] GRDB-dynamic Dependency entfernt (nur statische GRDB Library nötig)
 
-### Phase 2: Popover mit Live-Daten
+### Phase 2: Popover mit Live-Daten — ERLEDIGT
 
-- SQLite-Queries für Tages- und Wochendaten
-- Popover-UI gemäß Mockup
-- DB-Observation via GRDB (statt Timer-Polling)
+- [x] Popover-UI redesigned: Heute-Sektion (3 Stat-Cards + Aktivitäts-Zeile), KW-Sektion (Mini-Barchart + 2 Stat-Cards), Aktions-Buttons (Stubs)
+- [x] Weekly SQLite-Query via GRDB `ValueObservation` (Mo–So der aktuellen ISO-Woche)
+- [x] `WeekBarChart` Komponente: gestapelte Balken (regulär=blau, Overtime=rot, Wochenende=komplett rot)
+- [x] Design-Farben als `Color`-Extension (`otBlue`, `otRed`, `otGray`, `otGreen`)
+- [x] `StatCard` mit optionalem `accentColor`
+- [x] Deutsche Locale für Datum-Header (`HEUTE — Montag, 02.03.`)
+- [x] Popover-Höhe auf 460px angepasst
 
 ### Phase 3: Dashboard-Fenster
 

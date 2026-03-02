@@ -5,10 +5,12 @@ import Observation
 @Observable
 final class PopoverViewModel {
     var todaySummary: DailySummary?
+    var weekSummaries: [DailySummary] = []
     var topApps: [AppDailySummary] = []
     var isConnected: Bool = false
 
     private var summaryObservationTask: Task<Void, Never>?
+    private var weekObservationTask: Task<Void, Never>?
     private var appsObservationTask: Task<Void, Never>?
 
     var statusBarText: String {
@@ -41,11 +43,34 @@ final class PopoverViewModel {
         return Self.formatTime(time)
     }
 
-    var todayFormatted: String {
+    var weekActiveMinutes: Double {
+        weekSummaries.reduce(0) { $0 + $1.totalActiveMinutes }
+    }
+
+    var weekOvertimeMinutes: Double {
+        weekSummaries.reduce(0) { $0 + $1.overtimeMinutes }
+    }
+
+    var weekActiveText: String {
+        Self.formatMinutes(weekActiveMinutes)
+    }
+
+    var weekOvertimeText: String {
+        Self.formatMinutes(weekOvertimeMinutes)
+    }
+
+    var calendarWeekText: String {
+        let cal = Calendar(identifier: .iso8601)
+        let week = cal.component(.weekOfYear, from: Date())
+        return "KW \(week)"
+    }
+
+    var todayHeaderText: String {
         let formatter = DateFormatter()
-        formatter.dateStyle = .full
-        formatter.locale = Locale(identifier: "en_US")
-        return formatter.string(from: Date())
+        formatter.locale = Locale(identifier: "de_DE")
+        formatter.dateFormat = "EEEE, dd.MM."
+        let dayString = formatter.string(from: Date())
+        return "HEUTE — \(dayString.prefix(1).uppercased() + dayString.dropFirst())"
     }
 
     func startObserving() {
@@ -72,6 +97,23 @@ final class PopoverViewModel {
             }
         }
 
+        let (weekStart, weekEnd) = Self.currentWeekRange()
+        weekObservationTask = Task { [weak self] in
+            do {
+                let observation = ValueObservation.tracking { db in
+                    try DailySummary
+                        .filter(Column("date") >= weekStart && Column("date") <= weekEnd)
+                        .order(Column("date"))
+                        .fetchAll(db)
+                }
+                for try await summaries in observation.values(in: pool) {
+                    self?.weekSummaries = summaries
+                }
+            } catch {
+                print("[ViewModel] Week observation error: \(error)")
+            }
+        }
+
         appsObservationTask = Task { [weak self] in
             do {
                 let observation = ValueObservation.tracking { db in
@@ -92,7 +134,24 @@ final class PopoverViewModel {
 
     func stopObserving() {
         summaryObservationTask?.cancel()
+        weekObservationTask?.cancel()
         appsObservationTask?.cancel()
+    }
+
+    // MARK: - Week Range
+
+    static func currentWeekRange() -> (start: String, end: String) {
+        var cal = Calendar(identifier: .iso8601)
+        cal.locale = Locale(identifier: "de_DE")
+        let today = Date()
+        let weekday = cal.component(.weekday, from: today)
+        // ISO 8601: Monday = 2, Sunday = 1. Offset to get Monday.
+        let daysFromMonday = (weekday + 5) % 7
+        let monday = cal.date(byAdding: .day, value: -daysFromMonday, to: today)!
+        let sunday = cal.date(byAdding: .day, value: 6, to: monday)!
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd"
+        return (fmt.string(from: monday), fmt.string(from: sunday))
     }
 
     // MARK: - Formatting

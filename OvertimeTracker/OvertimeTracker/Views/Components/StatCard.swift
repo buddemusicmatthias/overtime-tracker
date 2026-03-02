@@ -4,12 +4,13 @@ struct StatCard: View {
     let title: String
     let value: String
     var subtitle: String?
+    var accentColor: Color?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(value)
                 .font(.system(size: 22, weight: .semibold, design: .monospaced))
-                .foregroundStyle(.white)
+                .foregroundStyle(accentColor ?? .white)
             Text(title)
                 .font(.caption)
                 .foregroundStyle(.secondary)
