@@ -72,8 +72,9 @@ def _migrate(conn: sqlite3.Connection):
         for sql in MIGRATIONS[version]:
             try:
                 conn.execute(sql)
-            except sqlite3.OperationalError:
-                pass  # Column/table already exists (fresh install)
+            except sqlite3.OperationalError as e:
+                if "duplicate column" not in str(e) and "already exists" not in str(e):
+                    raise  # Only skip "already exists" errors (fresh install)
     conn.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
     conn.commit()
 

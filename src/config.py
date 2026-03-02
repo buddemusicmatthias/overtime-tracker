@@ -52,14 +52,14 @@ class Config:
             conn.row_factory = sqlite3.Row
             row = conn.execute("SELECT * FROM settings WHERE id = 1").fetchone()
             conn.close()
-            if row is None:
-                return
-            self.schedule.core_start_hour = row["core_start_hour"]
-            self.schedule.core_end_hour = row["core_end_hour"]
-            self.schedule.work_days = [int(d) for d in row["work_days"].split(",") if d.strip()]
-            self.idle_timeout_seconds = row["idle_timeout_seconds"]
-        except Exception:
-            pass  # Table doesn't exist yet or DB not ready — use defaults
+        except (sqlite3.OperationalError, sqlite3.DatabaseError):
+            return  # Table doesn't exist yet or DB corrupt — use defaults
+        if row is None:
+            return
+        self.schedule.core_start_hour = row["core_start_hour"]
+        self.schedule.core_end_hour = row["core_end_hour"]
+        self.schedule.work_days = [int(d) for d in row["work_days"].split(",") if d.strip()]
+        self.idle_timeout_seconds = row["idle_timeout_seconds"]
 
 
 # Singleton config instance
