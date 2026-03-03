@@ -95,7 +95,7 @@ struct PopoverView: View {
                 .buttonStyle(.bordered)
 
                 Button {
-                    print("[Stub] Einstellungen")
+                    viewModel.onOpenSettings?()
                 } label: {
                     Image(systemName: "gearshape")
                         .font(.caption)
@@ -107,6 +107,12 @@ struct PopoverView: View {
 
             if !viewModel.isConnected {
                 Label("DB nicht gefunden", systemImage: "exclamationmark.triangle")
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
+            }
+
+            if !viewModel.isDaemonRunning {
+                Label("Tracker-Daemon läuft nicht", systemImage: "exclamationmark.triangle")
                     .font(.caption2)
                     .foregroundStyle(.orange)
             }

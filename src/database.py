@@ -40,7 +40,9 @@ CREATE TABLE IF NOT EXISTS app_daily_summary (
 CREATE TABLE IF NOT EXISTS settings (
     id                   INTEGER PRIMARY KEY CHECK (id = 1),
     core_start_hour      INTEGER NOT NULL DEFAULT 9,
+    core_start_minute    INTEGER NOT NULL DEFAULT 0,
     core_end_hour        INTEGER NOT NULL DEFAULT 18,
+    core_end_minute      INTEGER NOT NULL DEFAULT 0,
     work_days            TEXT NOT NULL DEFAULT '0,1,2,3',
     idle_timeout_seconds INTEGER NOT NULL DEFAULT 600
 );
@@ -48,7 +50,7 @@ CREATE TABLE IF NOT EXISTS settings (
 CREATE INDEX IF NOT EXISTS idx_activity_timestamp ON activity_log(timestamp);
 """
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 # Each migration brings the DB from (version - 1) to version.
 # Statements use try/except individually so fresh installs (where SCHEMA_SQL
@@ -57,6 +59,10 @@ MIGRATIONS: dict[int, list[str]] = {
     1: [
         "ALTER TABLE app_daily_summary ADD COLUMN regular_minutes REAL NOT NULL DEFAULT 0",
         "ALTER TABLE app_daily_summary ADD COLUMN overtime_minutes REAL NOT NULL DEFAULT 0",
+    ],
+    2: [
+        "ALTER TABLE settings ADD COLUMN core_start_minute INTEGER NOT NULL DEFAULT 0",
+        "ALTER TABLE settings ADD COLUMN core_end_minute INTEGER NOT NULL DEFAULT 0",
     ],
 }
 
@@ -156,12 +162,17 @@ def update_daily_summaries(target_date: str | None = None):
         category = config.get_work_category(weekday, 12)  # day-level category
 
         # For overtime calculation, count active polls outside core hours
+        # Use minute-granularity: compare HH*60+MM against core start/end in minutes
+        core_start_min = config.schedule.core_start_hour * 60 + config.schedule.core_start_minute
+        core_end_min = config.schedule.core_end_hour * 60 + config.schedule.core_end_minute
         overtime_row = conn.execute(
             """SELECT COUNT(*) as cnt FROM activity_log
             WHERE date(timestamp) = ? AND is_idle = 0
-            AND (CAST(strftime('%H', timestamp) AS INTEGER) < ?
-                 OR CAST(strftime('%H', timestamp) AS INTEGER) >= ?)""",
-            (target_date, config.schedule.core_start_hour, config.schedule.core_end_hour),
+            AND (CAST(strftime('%H', timestamp) AS INTEGER) * 60
+                 + CAST(strftime('%M', timestamp) AS INTEGER) < ?
+                 OR CAST(strftime('%H', timestamp) AS INTEGER) * 60
+                 + CAST(strftime('%M', timestamp) AS INTEGER) >= ?)""",
+            (target_date, core_start_min, core_end_min),
         ).fetchone()
 
         # On non-work days, all active time is overtime
@@ -188,13 +199,15 @@ def update_daily_summaries(target_date: str | None = None):
             """SELECT app_name,
                 COUNT(*) as polls,
                 AVG(poll_interval) as avg_int,
-                COUNT(CASE WHEN CAST(strftime('%H', timestamp) AS INTEGER) >= ?
-                          AND CAST(strftime('%H', timestamp) AS INTEGER) < ?
+                COUNT(CASE WHEN CAST(strftime('%H', timestamp) AS INTEGER) * 60
+                                + CAST(strftime('%M', timestamp) AS INTEGER) >= ?
+                          AND CAST(strftime('%H', timestamp) AS INTEGER) * 60
+                              + CAST(strftime('%M', timestamp) AS INTEGER) < ?
                      THEN 1 END) as core_polls
             FROM activity_log
             WHERE date(timestamp) = ? AND is_idle = 0
             GROUP BY app_name""",
-            (config.schedule.core_start_hour, config.schedule.core_end_hour, target_date),
+            (core_start_min, core_end_min, target_date),
         ).fetchall()
 
         for app_row in app_rows:

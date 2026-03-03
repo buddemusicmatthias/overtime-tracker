@@ -9,11 +9,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var dashboardWindow: NSWindow?
     private var dashboardViewModel: DashboardViewModel?
 
+    private var settingsWindow: NSWindow?
+    private var settingsViewModel: SettingsViewModel?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         terminateOtherInstances()
+        applyDockVisibility()
         setupStatusItem()
         setupPopover()
         viewModel.onOpenDashboard = { [weak self] in self?.openDashboard() }
+        viewModel.onOpenSettings = { [weak self] in self?.openSettings() }
         viewModel.startObserving()
         observeStatusBarText()
     }
@@ -119,5 +124,53 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         vm.startObserving()
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // MARK: - Settings Window
+
+    func openSettings() {
+        if let window = settingsWindow, window.isVisible {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+
+        popover.performClose(nil)
+
+        let vm = SettingsViewModel()
+        let hostingController = NSHostingController(
+            rootView: SettingsView(viewModel: vm)
+        )
+
+        let window = NSWindow(contentViewController: hostingController)
+        window.title = "Overtime Tracker — Einstellungen"
+        window.setFrameAutosaveName("SettingsWindow")
+        window.styleMask = [.titled, .closable]
+        window.setContentSize(NSSize(width: 400, height: 580))
+        window.center()
+
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: window,
+            queue: .main
+        ) { [weak self] _ in
+            self?.settingsViewModel?.stopObserving()
+            self?.settingsViewModel = nil
+            self?.settingsWindow = nil
+        }
+
+        settingsViewModel = vm
+        settingsWindow = window
+
+        vm.startObserving()
+        window.makeKeyAndOrderFront(nil)
+        NSApp.activate(ignoringOtherApps: true)
+    }
+
+    // MARK: - Dock Visibility
+
+    private func applyDockVisibility() {
+        let showInDock = UserDefaults.standard.bool(forKey: "showInDock")
+        NSApp.setActivationPolicy(showInDock ? .regular : .accessory)
     }
 }

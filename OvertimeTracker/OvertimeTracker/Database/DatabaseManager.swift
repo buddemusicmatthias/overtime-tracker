@@ -45,4 +45,26 @@ final class DatabaseManager {
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: Date())
     }
+
+    static var dbPathString: String { dbPath }
+
+    // MARK: - Settings Write
+
+    func saveSettings(_ settings: TrackerSettings) async throws {
+        guard let pool = dbPool else { return }
+        try await pool.write { db in
+            try settings.update(db)
+        }
+    }
+
+    // MARK: - Data Management
+
+    func deleteAllData() async throws {
+        guard let pool = dbPool else { return }
+        try await pool.write { db in
+            try db.execute(sql: "DELETE FROM activity_log")
+            try db.execute(sql: "DELETE FROM daily_summary")
+            try db.execute(sql: "DELETE FROM app_daily_summary")
+        }
+    }
 }

@@ -248,7 +248,9 @@ Die SwiftUI-App muss diese SQLite-Tabellen lesen können:
 |---|---|---|---|
 | id | INTEGER PK | 1 | CHECK (id = 1) — immer genau eine Zeile |
 | core_start_hour | INTEGER | 9 | Kernzeit Beginn (Stunde) |
+| core_start_minute | INTEGER | 0 | Kernzeit Beginn (Minute) |
 | core_end_hour | INTEGER | 18 | Kernzeit Ende (Stunde) |
+| core_end_minute | INTEGER | 0 | Kernzeit Ende (Minute) |
 | work_days | TEXT | `0,1,2,3` | Komma-separiert, 0=Mo ... 6=So |
 | idle_timeout_seconds | INTEGER | 600 | Idle-Timeout in Sekunden |
 
@@ -335,11 +337,19 @@ Bugfixes und Verbesserungen aus manuellem Testing nach Phase 3.
 - [x] AppBreakdownView: Picker-Label "Filter" verursachte Zeilenumbruch ("Fil-ter") → Label versteckt (`.labelsHidden()`)
 - [x] ExportTab: Redundante "Kategorie"-Spalte entfernt — Spalten "Aktiv" und "Overtime" machen `workCategory` überflüssig (Vorschau + CSV)
 
-### Phase 4: Einstellungen
+### Phase 4: Einstellungen — ERLEDIGT
 
-- Settings-UI (Kernzeiten, Arbeitstage, Idle-Timeout)
-- Settings lesen/schreiben in SQLite `settings`-Tabelle
-- Daemon-Status prüfen (via `launchctl`) + Warnung im Popover wenn Tracker inaktiv
+- [x] Python: Schema-Migration v2 — `core_start_minute`/`core_end_minute` Spalten, Overtime-SQL auf Minuten-Granularität
+- [x] Python: `config.py` — `WorkSchedule` um Minuten-Felder erweitert, `is_core_hours()` vergleicht in Minuten
+- [x] Swift: `TrackerSettings` → `Codable` + `PersistableRecord`, Minuten-Felder, Computed Helpers (`workDayInts`, `coreStartTotalMinutes`, `idleTimeoutMinutes`)
+- [x] Swift: `DatabaseManager` — `saveSettings()` und `deleteAllData()` Write-Methoden
+- [x] Swift: `LaunchAgentManager` — `nonisolated enum` wrapping `launchctl load/unload/list`
+- [x] Swift: `SettingsViewModel` — `@Observable` mit ValueObservation, Auto-Save, Launch-at-Login Toggle, Dock-Visibility Toggle
+- [x] Swift: `SettingsView` — 4 Sektionen (Arbeitszeiten, Tracking, System, Daten), ±15-Min-Stepper, Delete-Confirmation-Alert
+- [x] Swift: `DayPillRow` — 7 Capsule-Buttons (Mo–So), min. 1 muss aktiv bleiben
+- [x] Swift: `AppDelegate.openSettings()` — NSWindow-Pattern wie Dashboard, `applyDockVisibility()` beim Start
+- [x] Swift: `PopoverViewModel` — `onOpenSettings` Closure, `isDaemonRunning` Check
+- [x] Swift: `PopoverView` — Gear-Button verdrahtet, Daemon-Warnung wenn Python-Tracker nicht läuft
 
 ### Phase 5: Export + Polish
 
@@ -348,7 +358,7 @@ Bugfixes und Verbesserungen aus manuellem Testing nach Phase 3.
 - [x] Testdaten-Seed auf 2 Wochen reduziert (2026-02-17 bis 2026-03-02), reproduzierbar via `random.seed(42)`
 - PDF-Report (optional)
 - App-Icon
-- Launch at Login Integration
+- Launch at Login Integration (Swift-App selbst als Login Item)
 - Finale Tests
 
 ---

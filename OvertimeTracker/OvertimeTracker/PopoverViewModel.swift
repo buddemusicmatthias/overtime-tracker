@@ -8,7 +8,9 @@ final class PopoverViewModel {
     var weekSummaries: [DailySummary] = []
     var topApps: [AppDailySummary] = []
     var isConnected: Bool = false
+    var isDaemonRunning: Bool = true
     var onOpenDashboard: (() -> Void)?
+    var onOpenSettings: (() -> Void)?
 
     private var summaryObservationTask: Task<Void, Never>?
     private var weekObservationTask: Task<Void, Never>?
@@ -83,6 +85,7 @@ final class PopoverViewModel {
         }
 
         isConnected = true
+        isDaemonRunning = LaunchAgentManager.isDaemonRunning()
         let today = DatabaseManager.todayString()
 
         summaryObservationTask = Task { [weak self] in
