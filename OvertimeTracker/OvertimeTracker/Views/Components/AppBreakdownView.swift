@@ -31,6 +31,7 @@ struct AppBreakdownView: View {
                         Text(f.rawValue).tag(f)
                     }
                 }
+                .labelsHidden()
                 .pickerStyle(.segmented)
                 .frame(width: 220)
             }

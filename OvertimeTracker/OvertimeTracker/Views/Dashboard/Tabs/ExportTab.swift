@@ -102,7 +102,8 @@ struct ExportTab: View {
                 Text("Tag").fontWeight(.semibold)
                 Text("Aktiv").fontWeight(.semibold)
                 Text("Overtime").fontWeight(.semibold)
-                Text("Kategorie").fontWeight(.semibold)
+                Text("Erster").fontWeight(.semibold)
+                Text("Letzter").fontWeight(.semibold)
             }
             .font(.caption)
             .foregroundStyle(.secondary)
@@ -124,7 +125,10 @@ struct ExportTab: View {
                 .foregroundStyle(Color.otBlue)
             Text(Formatters.formatMinutes(s.overtimeMinutes))
                 .foregroundStyle(Color.otRed)
-            Text(s.workCategory)
+            Text(s.firstActivity.map(Formatters.formatTime) ?? "—")
+                .foregroundStyle(Color.otGreen)
+            Text(s.lastActivity.map(Formatters.formatTime) ?? "—")
+                .foregroundStyle(Color.otGreen)
         }
         .font(.caption.monospaced())
     }

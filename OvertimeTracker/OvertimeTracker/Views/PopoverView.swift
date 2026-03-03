@@ -97,7 +97,7 @@ struct PopoverView: View {
                 Button {
                     print("[Stub] Einstellungen")
                 } label: {
-                    Text("Einstellungen")
+                    Image(systemName: "gearshape")
                         .font(.caption)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 6)

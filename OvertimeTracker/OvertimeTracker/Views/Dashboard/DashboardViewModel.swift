@@ -119,13 +119,13 @@ final class DashboardViewModel {
     // MARK: - CSV Export
 
     func generateCSV() -> String {
-        var lines = ["Datum;Wochentag;Aktiv (min);Idle (min);Overtime (min);Erster;Letzter;Kategorie"]
+        var lines = ["Datum;Wochentag;Aktiv (min);Idle (min);Overtime (min);Erster;Letzter"]
         let dayNames = ["", "So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"]
         for s in exportSummaries {
             let day = s.dayOfWeek >= 1 && s.dayOfWeek <= 7 ? dayNames[s.dayOfWeek] : "?"
             let first = s.firstActivity ?? ""
             let last = s.lastActivity ?? ""
-            lines.append("\(s.date);\(day);\(Int(s.totalActiveMinutes));\(Int(s.totalIdleMinutes));\(Int(s.overtimeMinutes));\(first);\(last);\(s.workCategory)")
+            lines.append("\(s.date);\(day);\(Int(s.totalActiveMinutes));\(Int(s.totalIdleMinutes));\(Int(s.overtimeMinutes));\(first);\(last)")
         }
         return lines.joined(separator: "\n")
     }

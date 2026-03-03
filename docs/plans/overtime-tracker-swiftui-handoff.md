@@ -327,6 +327,14 @@ Die SwiftUI-App muss diese SQLite-Tabellen lesen können:
 - [x] `AppDelegate.openDashboard()`: `NSWindow` + `NSHostingController`, `setFrameAutosaveName` für Position-Persistenz, `willCloseNotification` für ViewModel-Cleanup
 - [x] PopoverView: "Dashboard öffnen" Button via `onOpenDashboard` Closure an AppDelegate angebunden
 
+### Phase 3.5: User-Feedback — ERLEDIGT
+
+Bugfixes und Verbesserungen aus manuellem Testing nach Phase 3.
+
+- [x] Popover: Einstellungen-Button von Text auf Zahnrad-Icon (`gearshape` SF Symbol) geändert — macOS-Standard
+- [x] AppBreakdownView: Picker-Label "Filter" verursachte Zeilenumbruch ("Fil-ter") → Label versteckt (`.labelsHidden()`)
+- [x] ExportTab: Redundante "Kategorie"-Spalte entfernt — Spalten "Aktiv" und "Overtime" machen `workCategory` überflüssig (Vorschau + CSV)
+
 ### Phase 4: Einstellungen
 
 - Settings-UI (Kernzeiten, Arbeitstage, Idle-Timeout)
@@ -335,10 +343,11 @@ Die SwiftUI-App muss diese SQLite-Tabellen lesen können:
 
 ### Phase 5: Export + Polish
 
-- CSV-Export
+- CSV-Export mit App-Aufschlüsselung (App-Daten pro Tag im Export ergänzen)
 - PDF-Report (optional)
 - App-Icon
 - Launch at Login Integration
+- Testdaten-Seed erweitern (Edge Cases: leere Tage, Wochenend-Arbeit, keine Overtime)
 - Finale Tests
 
 ---
