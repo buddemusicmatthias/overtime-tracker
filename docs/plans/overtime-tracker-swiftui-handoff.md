@@ -357,10 +357,20 @@ Bugfixes und Verbesserungen aus manuellem Testing nach Phase 3.
 - [x] Export-Preview zeigt 5 Zeilen im neuen Format mit Summary-Zeile (Tage/Apps/Zeilen)
 - [x] Testdaten-Seed auf 2 Wochen reduziert (2026-02-17 bis 2026-03-02), reproduzierbar via `random.seed(42)`
 - PDF-Report — bewusst verschoben
-- [x] App-Icon: `Contents.json` auf Single-Image-Format umgestellt (wartet auf 1024x1024 PNG vom User)
+- [x] App-Icon: 1024x1024 PNG in `AppIcon.appiconset`, `Contents.json` mit `scale: 2x`
 - [x] Launch at Login: Ein Toggle steuert Daemon (LaunchAgent) + Swift-App (`SMAppService.mainApp`)
 - [x] LaunchAgent Auto-Install: `LaunchAgentManager.install()` schreibt plist automatisch, kein `install.sh` mehr nötig
 - [x] NiceGUI-Dashboard entfernt: `src/dashboard.py` gelöscht, `nicegui` aus requirements.txt entfernt — SwiftUI-Dashboard ersetzt es vollständig
+- [x] rumps entfernt: Python-Daemon läuft headless (`while`-Loop + `signal`-Handler), `src/menubar.py` gelöscht
+- [x] Export-Tab: Compact-DatePicker, "Laden"-Button aligned, Summary zeigt Regular/Overtime-Stunden statt Zeilen-Counts
+
+### Phase 6: Finalisierung — OFFEN
+
+- [ ] **App-Icon im Build fixen** — Icon wird in Xcode nicht angezeigt (Dock/Finder), `Contents.json` + Asset-Catalog prüfen
+- [ ] **CLAUDE.md aktualisieren** — veraltete Referenzen entfernen (NiceGUI, Friday-Kategorie, rumps); Architektur an Python-Daemon + SwiftUI-App anpassen
+- [ ] **README.md schreiben** — Projekt-Beschreibung, Screenshots, Setup-Anleitung für das öffentliche Repo
+- [ ] **Repo aufräumen** — `com.matthias.overtime-tracker.plist` im Root entfernen (LaunchAgentManager schreibt sie automatisch); `scripts/install.sh` prüfen ob noch nötig; `Assets.xcassets/overtime-tracker.png` Duplikat entfernen
+- PDF-Report — bewusst verschoben
 - Finale Tests
 
 ---
