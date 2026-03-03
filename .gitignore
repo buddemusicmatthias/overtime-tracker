@@ -35,3 +35,7 @@ xcuserdata/
 # Environment
 .env
 env_vars.env
+
+# internal
+CLAUDE.md
+docs/
