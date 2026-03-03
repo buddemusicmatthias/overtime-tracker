@@ -1,10 +1,7 @@
 """macOS menubar app for overtime tracking using rumps."""
 
 import sys
-import subprocess
-import webbrowser
 from datetime import date, datetime
-from pathlib import Path
 
 import rumps
 
@@ -21,14 +18,11 @@ class OvertimeTrackerApp(rumps.App):
             quit_button=None,  # we add our own quit button
         )
         self.tracking_active = True
-        self.dashboard_proc = None
 
         self.menu = [
             rumps.MenuItem("today_label", callback=None),
             rumps.MenuItem("week_label", callback=None),
             None,  # separator
-            rumps.MenuItem("Open Dashboard", callback=self.open_dashboard),
-            None,
             rumps.MenuItem("Pause Tracking", callback=self.toggle_tracking),
             None,
             rumps.MenuItem("Quit", callback=self.quit_app),
@@ -81,19 +75,6 @@ class OvertimeTrackerApp(rumps.App):
         else:
             self.menu["week_label"].title = "Week: no data yet"
 
-    def open_dashboard(self, _):
-        """Launch dashboard subprocess and open browser."""
-        if self.dashboard_proc is None or self.dashboard_proc.poll() is not None:
-            project_root = Path(__file__).resolve().parent.parent
-            log_path = config.db_path.parent / "dashboard.log"
-            self.dashboard_proc = subprocess.Popen(
-                [sys.executable, "-m", "src.dashboard"],
-                cwd=str(project_root),
-                stdout=subprocess.DEVNULL,
-                stderr=open(log_path, "a"),
-            )
-        webbrowser.open(f"http://localhost:{config.dashboard_port}")
-
     def toggle_tracking(self, sender):
         """Pause or resume activity tracking."""
         self.tracking_active = not self.tracking_active
@@ -104,8 +85,6 @@ class OvertimeTrackerApp(rumps.App):
             self._update_menu_labels()
 
     def quit_app(self, _):
-        """Clean shutdown: update summaries, stop dashboard, quit."""
+        """Clean shutdown: update summaries and quit."""
         update_daily_summaries()
-        if self.dashboard_proc and self.dashboard_proc.poll() is None:
-            self.dashboard_proc.terminate()
         rumps.quit_application()

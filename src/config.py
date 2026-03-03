@@ -26,9 +26,6 @@ class Config:
         default_factory=lambda: Path.home() / ".overtime-tracker" / "overtime.db"
     )
 
-    # Dashboard
-    dashboard_port: int = 8080
-
     # Work schedule
     schedule: WorkSchedule = field(default_factory=WorkSchedule)
 
