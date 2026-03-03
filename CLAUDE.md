@@ -32,7 +32,6 @@ tail -f /tmp/overtime-tracker.stderr.log      # Daemon logs
 ## Conventions
 - Python source: `src/`
 - Swift source: `OvertimeTracker/OvertimeTracker/`
-- Tests: `tests/`
 - Test data: `scripts/seed_testdata.py`
 - Python entry point: `src/main.py`
 - Swift entry point: `OvertimeTrackerApp.swift`
@@ -42,3 +41,18 @@ tail -f /tmp/overtime-tracker.stderr.log      # Daemon logs
 - Core hours: Default Mon–Thu, 09:00–18:00 (configurable per-day, 15-min granularity)
 - Idle timeout: Default 10 minutes (configurable)
 - Polling interval: 15 seconds
+
+## Distribution (internal)
+
+To build a distributable zip for others (no Xcode needed on their end):
+
+1. Xcode → Product → Archive → Distribute App → "Copy App" → choose folder
+2. Bundle into a zip:
+   ```
+   OvertimeTracker/
+   ├── OvertimeTracker.app   ← from Archive export
+   ├── setup.sh              ← from repo root
+   ├── src/                  ← Python daemon (whole folder)
+   └── requirements.txt      ← from repo root
+   ```
+3. Recipient runs: `chmod +x setup.sh && ./setup.sh`, then opens the app (right-click → Open the first time for Gatekeeper)
