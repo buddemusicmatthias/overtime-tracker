@@ -73,7 +73,7 @@ struct PopoverView: View {
     private var actionButtons: some View {
         VStack(spacing: 8) {
             Button {
-                print("[Stub] Dashboard öffnen")
+                viewModel.onOpenDashboard?()
             } label: {
                 Text("Dashboard öffnen")
                     .font(.subheadline.weight(.medium))

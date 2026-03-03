@@ -8,6 +8,7 @@ final class PopoverViewModel {
     var weekSummaries: [DailySummary] = []
     var topApps: [AppDailySummary] = []
     var isConnected: Bool = false
+    var onOpenDashboard: (() -> Void)?
 
     private var summaryObservationTask: Task<Void, Never>?
     private var weekObservationTask: Task<Void, Never>?
@@ -15,32 +16,32 @@ final class PopoverViewModel {
 
     var statusBarText: String {
         guard let summary = todaySummary else { return "—:— OT" }
-        return Self.formatMinutes(summary.overtimeMinutes) + " OT"
+        return Formatters.formatMinutes(summary.overtimeMinutes) + " OT"
     }
 
     var overtimeText: String {
         guard let summary = todaySummary else { return "—:—" }
-        return Self.formatMinutes(summary.overtimeMinutes)
+        return Formatters.formatMinutes(summary.overtimeMinutes)
     }
 
     var activeText: String {
         guard let summary = todaySummary else { return "—:—" }
-        return Self.formatMinutes(summary.totalActiveMinutes)
+        return Formatters.formatMinutes(summary.totalActiveMinutes)
     }
 
     var idleText: String {
         guard let summary = todaySummary else { return "—:—" }
-        return Self.formatMinutes(summary.totalIdleMinutes)
+        return Formatters.formatMinutes(summary.totalIdleMinutes)
     }
 
     var firstActivityText: String {
         guard let time = todaySummary?.firstActivity else { return "—:—" }
-        return Self.formatTime(time)
+        return Formatters.formatTime(time)
     }
 
     var lastActivityText: String {
         guard let time = todaySummary?.lastActivity else { return "—:—" }
-        return Self.formatTime(time)
+        return Formatters.formatTime(time)
     }
 
     var weekActiveMinutes: Double {
@@ -52,11 +53,11 @@ final class PopoverViewModel {
     }
 
     var weekActiveText: String {
-        Self.formatMinutes(weekActiveMinutes)
+        Formatters.formatMinutes(weekActiveMinutes)
     }
 
     var weekOvertimeText: String {
-        Self.formatMinutes(weekOvertimeMinutes)
+        Formatters.formatMinutes(weekOvertimeMinutes)
     }
 
     var calendarWeekText: String {
@@ -141,34 +142,6 @@ final class PopoverViewModel {
     // MARK: - Week Range
 
     static func currentWeekRange() -> (start: String, end: String) {
-        var cal = Calendar(identifier: .iso8601)
-        cal.locale = Locale(identifier: "de_DE")
-        let today = Date()
-        let weekday = cal.component(.weekday, from: today)
-        // ISO 8601: Monday = 2, Sunday = 1. Offset to get Monday.
-        let daysFromMonday = (weekday + 5) % 7
-        let monday = cal.date(byAdding: .day, value: -daysFromMonday, to: today)!
-        let sunday = cal.date(byAdding: .day, value: 6, to: monday)!
-        let fmt = DateFormatter()
-        fmt.dateFormat = "yyyy-MM-dd"
-        return (fmt.string(from: monday), fmt.string(from: sunday))
-    }
-
-    // MARK: - Formatting
-
-    private static func formatMinutes(_ minutes: Double) -> String {
-        let total = Int(minutes)
-        let h = total / 60
-        let m = abs(total) % 60
-        return String(format: "%d:%02d", h, m)
-    }
-
-    /// Extracts HH:MM from an ISO timestamp like "2026-03-02T09:15:23"
-    private static func formatTime(_ isoTimestamp: String) -> String {
-        // Timestamp format: "YYYY-MM-DDTHH:MM:SS"
-        guard isoTimestamp.count >= 16 else { return isoTimestamp }
-        let startIndex = isoTimestamp.index(isoTimestamp.startIndex, offsetBy: 11)
-        let endIndex = isoTimestamp.index(startIndex, offsetBy: 5)
-        return String(isoTimestamp[startIndex..<endIndex])
+        Formatters.weekRange()
     }
 }
