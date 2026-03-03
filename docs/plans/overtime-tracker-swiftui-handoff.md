@@ -315,12 +315,17 @@ Die SwiftUI-App muss diese SQLite-Tabellen lesen können:
 - [x] Deutsche Locale für Datum-Header (`HEUTE — Montag, 02.03.`)
 - [x] Popover-Höhe auf 460px angepasst
 
-### Phase 3: Dashboard-Fenster
+### Phase 3: Dashboard-Fenster — ERLEDIGT
 
-- Tab-Navigation
-- Heute-Tab mit Metric Cards + App-Aufschlüsselung
-- Wochen-Tab mit Stacked Bars + Tabelle
-- Monats-Tab mit Area Chart
+- [x] `Formatters.swift` extrahiert: `formatMinutes()`, `formatTime()`, `formatHoursMinutes()`, `weekRange()`, `monthRange()`, `shortDate()`, `weekdayShort()` — `nonisolated enum` für MainActor-Kompatibilität
+- [x] `DashboardViewModel`: `@Observable` mit separaten GRDB `ValueObservation`-Streams für Heute/Woche/Monat/Export, aggregierte App-Queries per `GROUP BY app_name, SUM()`
+- [x] `AppBreakdownView`: Wiederverwendbare Komponente mit Filter-Toggle (Alle|Regulär|Overtime), max 8 Apps, horizontale Balken proportional
+- [x] `DashboardBarChart`: Swift Charts `BarMark`, gestapelt (regulär=blau unten, Overtime=rot oben) mit `chartForegroundStyleScale`
+- [x] `CumulativeOvertimeChart`: Swift Charts `AreaMark` + `LineMark`, kumulative Overtime pro Tag mit rotem Gradient
+- [x] 4 Tab-Views: HeuteTab (4 Metric Cards), WocheTab (Bar Chart + Detail-Tabelle), MonatTab (Monats-Navigator + Area Chart), ExportTab (DatePicker + CSV-Export via `NSSavePanel`)
+- [x] `DashboardView`: `TabView`-Container, `frame(minWidth: 780, minHeight: 600)`, Dark Mode
+- [x] `AppDelegate.openDashboard()`: `NSWindow` + `NSHostingController`, `setFrameAutosaveName` für Position-Persistenz, `willCloseNotification` für ViewModel-Cleanup
+- [x] PopoverView: "Dashboard öffnen" Button via `onOpenDashboard` Closure an AppDelegate angebunden
 
 ### Phase 4: Einstellungen
 
