@@ -130,7 +130,7 @@ struct SettingsView: View {
                 ))
 
                 if !LaunchAgentManager.isVenvReady {
-                    Text("Python-venv nicht gefunden. Erstelle es mit: python3 -m venv venv && venv/bin/pip install -r requirements.txt")
+                    Text("Python-Daemon nicht eingerichtet. Führe setup.sh aus dem Installationsordner aus.")
                         .font(.caption)
                         .foregroundStyle(.orange)
                 }

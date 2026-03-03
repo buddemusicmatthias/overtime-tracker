@@ -8,14 +8,8 @@ nonisolated enum LaunchAgentManager {
         NSHomeDirectory() + "/Library/LaunchAgents/\(plistLabel).plist"
     }
 
-    /// Project root derived from source file location at compile time.
-    /// LaunchAgentManager.swift → Utilities/ → OvertimeTracker/ → OvertimeTracker/ → overtime-tracker/
-    static let projectRoot: String = URL(fileURLWithPath: #filePath)
-        .deletingLastPathComponent()
-        .deletingLastPathComponent()
-        .deletingLastPathComponent()
-        .deletingLastPathComponent()
-        .path
+    /// Runtime convention path — all daemon files live under ~/.overtime-tracker/
+    static let projectRoot: String = NSHomeDirectory() + "/.overtime-tracker"
 
     static var pythonPath: String {
         projectRoot + "/venv/bin/python"
