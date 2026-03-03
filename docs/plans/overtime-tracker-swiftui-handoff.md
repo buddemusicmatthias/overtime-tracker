@@ -364,12 +364,13 @@ Bugfixes und Verbesserungen aus manuellem Testing nach Phase 3.
 - [x] rumps entfernt: Python-Daemon läuft headless (`while`-Loop + `signal`-Handler), `src/menubar.py` gelöscht
 - [x] Export-Tab: Compact-DatePicker, "Laden"-Button aligned, Summary zeigt Regular/Overtime-Stunden statt Zeilen-Counts
 
-### Phase 6: Finalisierung — OFFEN
+### Phase 6: Finalisierung — IN ARBEIT
 
-- [ ] **App-Icon im Build fixen** — Icon wird in Xcode nicht angezeigt (Dock/Finder), `Contents.json` + Asset-Catalog prüfen
-- [ ] **CLAUDE.md aktualisieren** — veraltete Referenzen entfernen (NiceGUI, Friday-Kategorie, rumps); Architektur an Python-Daemon + SwiftUI-App anpassen
-- [ ] **README.md schreiben** — Projekt-Beschreibung, Screenshots, Setup-Anleitung für das öffentliche Repo
-- [ ] **Repo aufräumen** — `com.matthias.overtime-tracker.plist` im Root entfernen (LaunchAgentManager schreibt sie automatisch); `scripts/install.sh` prüfen ob noch nötig; `Assets.xcassets/overtime-tracker.png` Duplikat entfernen
+- [x] **App-Icon geprüft** — `Contents.json` + Asset-Catalog korrekt (1024×1024 PNG, `512x512 @2x`). Problem war Build-Cache; Clean Build (Cmd+Shift+K) behebt es.
+- [x] **CLAUDE.md aktualisiert** — NiceGUI, rumps, Friday-Kategorie entfernt; Architektur auf Python-Daemon (headless) + SwiftUI-App aktualisiert
+- [x] **README.md geschrieben** — Englisch, kompakt: Was/Features/Installation. Hinweis auf `#filePath`-Constraint (Repo nicht verschieben).
+- [x] **Repo aufgeräumt** — `com.matthias.overtime-tracker.plist` (Root), `scripts/install.sh`, `Assets.xcassets/overtime-tracker.png` (Duplikat) entfernt
+- [ ] **`#filePath`-Abhängigkeit ablösen** — `LaunchAgentManager` nutzt Compile-Time-Pfad (`#filePath`) für Projekt-Root. Dadurch muss auf jeder Maschine Xcode vorhanden sein und das Repo darf nicht verschoben werden. Ablösung durch Runtime-Pfad (z.B. `Bundle.main.bundlePath`-relative Auflösung oder Konventionspfad `~/.overtime-tracker/venv/`), um "build once, distribute .app" zu ermöglichen.
 - PDF-Report — bewusst verschoben
 - Finale Tests
 
