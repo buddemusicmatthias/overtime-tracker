@@ -1,48 +1,44 @@
 # Overtime Tracker
 
 ## Project Overview
-macOS menubar app that tracks overtime hours automatically. Detects active app, idle time, and categorizes work into regular hours, overtime, and Friday buffer.
+macOS menubar app that tracks overtime hours automatically. Two components: a Python daemon that detects active apps and idle time, and a native SwiftUI app with menubar popover, dashboard, and settings.
 
 ## Tech Stack
-- Python 3.13+ with `python3 -m venv` (NOT virtualenv — rumps incompatible)
-- rumps: macOS menubar framework
-- pyobjc-framework-Cocoa + pyobjc-framework-Quartz: macOS APIs
-- NiceGUI: Dashboard (runs as separate subprocess)
-- SQLite with WAL mode: Local data storage at ~/.overtime-tracker/overtime.db
+- **Python daemon:** Python 3.13+, pyobjc-framework-Cocoa, pyobjc-framework-Quartz
+- **SwiftUI app:** Swift 5, GRDB.swift (SQLite), Swift Charts, macOS 26.2+
+- **Shared:** SQLite with WAL mode at `~/.overtime-tracker/overtime.db`
 
 ## Architecture
-- Main process: rumps app (menubar + tracker polling)
-- Subprocess: NiceGUI dashboard (launched on demand, port 8080)
-- Both share SQLite DB via WAL mode for concurrent read/write
+- **Python daemon** (`src/`): Headless process, polls active app every 15s, detects idle via CGEventSource, writes to SQLite. Runs as LaunchAgent.
+- **SwiftUI app** (`OvertimeTracker/`): Reads same SQLite DB. Menubar icon + NSPopover, Dashboard window (4 tabs), Settings window. Manages LaunchAgent install via `LaunchAgentManager`.
+- WAL mode allows concurrent writes (Python) + reads (Swift).
 
-## Running the App
+## Running
 
 ```bash
-# 1. Setup (einmalig)
+# Python daemon (manual)
 python3 -m venv venv
 venv/bin/pip install -r requirements.txt
-
-# 2a. Manuell starten (aus Projekt-Root)
 venv/bin/python -m src.main
 
-# 2b. Als LaunchAgent installieren (Autostart beim Login)
-./scripts/install.sh
+# SwiftUI app
+# Open OvertimeTracker/OvertimeTracker.xcodeproj in Xcode → Run
 
-# LaunchAgent verwalten
-launchctl list | grep overtime          # Status prüfen
-launchctl unload ~/Library/LaunchAgents/com.matthias.overtime-tracker.plist  # Stoppen
-tail -f /tmp/overtime-tracker.stderr.log  # Logs ansehen
+# LaunchAgent (managed by Swift app's "Launch at Login" toggle)
+launchctl list | grep overtime                # Status
+tail -f /tmp/overtime-tracker.stderr.log      # Daemon logs
 ```
 
 ## Conventions
-- Dependencies: requirements.txt
-- Source code: src/
-- Tests: tests/
-- Entry point: src/main.py
+- Python source: `src/`
+- Swift source: `OvertimeTracker/OvertimeTracker/`
+- Tests: `tests/`
+- Test data: `scripts/seed_testdata.py`
+- Python entry point: `src/main.py`
+- Swift entry point: `OvertimeTrackerApp.swift`
 
-## Key Parameters
-- Core hours: Mon-Thu, 09:00-18:00
-- Weekly target: 32h
-- Idle timeout: 10 minutes
+## Key Parameters (configurable in Settings)
+- Work categories: `regular` and `overtime` only
+- Core hours: Default Mon–Thu, 09:00–18:00 (configurable per-day, 15-min granularity)
+- Idle timeout: Default 10 minutes (configurable)
 - Polling interval: 15 seconds
-- Friday: logged separately (not auto-categorized)
