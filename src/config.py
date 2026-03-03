@@ -63,7 +63,10 @@ class Config:
             return
         self.schedule.core_start_hour = row["core_start_hour"]
         self.schedule.core_end_hour = row["core_end_hour"]
-        self.schedule.work_days = [int(d) for d in row["work_days"].split(",") if d.strip()]
+        try:
+            self.schedule.work_days = [int(d) for d in row["work_days"].split(",") if d.strip()]
+        except (ValueError, TypeError):
+            pass  # Keep defaults on malformed data
         self.idle_timeout_seconds = row["idle_timeout_seconds"]
         # Minute columns added in migration v2 — may not exist on older DBs
         try:
