@@ -62,19 +62,12 @@ final class DashboardViewModel {
 
     // MARK: - Export Computed
 
-    var exportDayCount: Int {
-        Set(exportAppData.map(\.date)).count
+    var exportTotalRegular: Double {
+        exportAppData.reduce(0) { $0 + $1.regularMinutes }
     }
 
-    var exportAppCount: Int {
-        Set(exportAppData.map(\.appName)).count
-    }
-
-    /// Number of CSV rows after unpivoting (each row can produce up to 2 lines)
-    var exportRowCount: Int {
-        exportAppData.reduce(0) { count, row in
-            count + (row.regularMinutes > 0 ? 1 : 0) + (row.overtimeMinutes > 0 ? 1 : 0)
-        }
+    var exportTotalOvertime: Double {
+        exportAppData.reduce(0) { $0 + $1.overtimeMinutes }
     }
 
     var cumulativeOvertime: [(date: String, cumulative: Double)] {

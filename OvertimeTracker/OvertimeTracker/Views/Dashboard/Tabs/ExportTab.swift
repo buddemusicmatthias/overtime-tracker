@@ -56,19 +56,19 @@ struct ExportTab: View {
             Text("Zeitraum")
                 .font(.headline)
 
-            HStack(spacing: 16) {
+            HStack(alignment: .bottom, spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Von").font(.caption).foregroundStyle(.secondary)
                     DatePicker("", selection: $exportStart, displayedComponents: .date)
                         .labelsHidden()
-                        .datePickerStyle(.field)
+                        .datePickerStyle(.compact)
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Bis").font(.caption).foregroundStyle(.secondary)
                     DatePicker("", selection: $exportEnd, displayedComponents: .date)
                         .labelsHidden()
-                        .datePickerStyle(.field)
+                        .datePickerStyle(.compact)
                 }
 
                 Button("Laden") {
@@ -98,9 +98,11 @@ struct ExportTab: View {
 
             Spacer()
 
-            Text("\(viewModel.exportDayCount) Tage · \(viewModel.exportAppCount) Apps · \(viewModel.exportRowCount) Zeilen")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            if !viewModel.exportAppData.isEmpty {
+                Text("\(Formatters.formatMinutes(viewModel.exportTotalRegular)) Regular · \(Formatters.formatMinutes(viewModel.exportTotalOvertime)) Overtime")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -144,7 +146,7 @@ struct ExportTab: View {
                 .font(.caption.monospaced())
             }
 
-            if viewModel.exportRowCount > 5 {
+            if previewRows.count >= 5 {
                 GridRow {
                     Text("…")
                         .foregroundStyle(.secondary)
