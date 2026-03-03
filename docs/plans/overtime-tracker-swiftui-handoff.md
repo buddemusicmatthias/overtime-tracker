@@ -359,6 +359,8 @@ Bugfixes und Verbesserungen aus manuellem Testing nach Phase 3.
 - PDF-Report — bewusst verschoben
 - [x] App-Icon: `Contents.json` auf Single-Image-Format umgestellt (wartet auf 1024x1024 PNG vom User)
 - [x] Launch at Login: Ein Toggle steuert Daemon (LaunchAgent) + Swift-App (`SMAppService.mainApp`)
+- [x] LaunchAgent Auto-Install: `LaunchAgentManager.install()` schreibt plist automatisch, kein `install.sh` mehr nötig
+- [x] NiceGUI-Dashboard entfernt: `src/dashboard.py` gelöscht, `nicegui` aus requirements.txt entfernt — SwiftUI-Dashboard ersetzt es vollständig
 - Finale Tests
 
 ---
