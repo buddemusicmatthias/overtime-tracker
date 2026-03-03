@@ -1,6 +1,7 @@
 import Cocoa
 import GRDB
 import Observation
+import ServiceManagement
 
 @Observable
 final class SettingsViewModel {
@@ -18,7 +19,9 @@ final class SettingsViewModel {
     func startObserving() {
         guard let pool = DatabaseManager.shared.dbPool else { return }
 
-        launchAtLogin = LaunchAgentManager.isInstalled && LaunchAgentManager.isDaemonRunning()
+        let daemonLoaded = LaunchAgentManager.isInstalled && LaunchAgentManager.isDaemonRunning()
+        let appRegistered = SMAppService.mainApp.status == .enabled
+        launchAtLogin = daemonLoaded || appRegistered
         isDaemonRunning = LaunchAgentManager.isDaemonRunning()
         showInDock = UserDefaults.standard.bool(forKey: Self.showInDockKey)
 
@@ -55,16 +58,27 @@ final class SettingsViewModel {
     // MARK: - Launch at Login
 
     func toggleLaunchAtLogin() {
-        do {
-            if launchAtLogin {
-                try LaunchAgentManager.unload()
-            } else {
-                try LaunchAgentManager.load()
+        if launchAtLogin {
+            // Disable both: daemon LaunchAgent + Swift app login item
+            do { try LaunchAgentManager.unload() } catch {
+                print("[Settings] LaunchAgent unload error: \(error)")
             }
-            launchAtLogin = LaunchAgentManager.isDaemonRunning()
-        } catch {
-            print("[Settings] LaunchAgent toggle error: \(error)")
+            do { try SMAppService.mainApp.unregister() } catch {
+                print("[Settings] SMAppService unregister error: \(error)")
+            }
+        } else {
+            // Enable both: daemon LaunchAgent + Swift app login item
+            do { try LaunchAgentManager.load() } catch {
+                print("[Settings] LaunchAgent load error: \(error)")
+            }
+            do { try SMAppService.mainApp.register() } catch {
+                print("[Settings] SMAppService register error: \(error)")
+            }
         }
+
+        let daemonLoaded = LaunchAgentManager.isDaemonRunning()
+        let appRegistered = SMAppService.mainApp.status == .enabled
+        launchAtLogin = daemonLoaded || appRegistered
     }
 
     // MARK: - Dock Visibility

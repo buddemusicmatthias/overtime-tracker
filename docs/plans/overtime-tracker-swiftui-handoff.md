@@ -356,9 +356,9 @@ Bugfixes und Verbesserungen aus manuellem Testing nach Phase 3.
 - [x] CSV-Export redesigned: Tidy-Format mit einer Zeile pro App pro Kategorie pro Tag (`Datum;App;Minuten;Kategorie`)
 - [x] Export-Preview zeigt 5 Zeilen im neuen Format mit Summary-Zeile (Tage/Apps/Zeilen)
 - [x] Testdaten-Seed auf 2 Wochen reduziert (2026-02-17 bis 2026-03-02), reproduzierbar via `random.seed(42)`
-- PDF-Report (optional)
-- App-Icon
-- Launch at Login Integration (Swift-App selbst als Login Item)
+- PDF-Report — bewusst verschoben
+- [x] App-Icon: `Contents.json` auf Single-Image-Format umgestellt (wartet auf 1024x1024 PNG vom User)
+- [x] Launch at Login: Ein Toggle steuert Daemon (LaunchAgent) + Swift-App (`SMAppService.mainApp`)
 - Finale Tests
 
 ---

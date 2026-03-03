@@ -129,8 +129,8 @@ struct SettingsView: View {
                     set: { _ in viewModel.toggleLaunchAtLogin() }
                 ))
 
-                if !LaunchAgentManager.isInstalled {
-                    Text("LaunchAgent nicht installiert. Führe scripts/install.sh aus.")
+                if !LaunchAgentManager.isVenvReady {
+                    Text("Python-venv nicht gefunden. Erstelle es mit: python3 -m venv venv && venv/bin/pip install -r requirements.txt")
                         .font(.caption)
                         .foregroundStyle(.orange)
                 }

@@ -8,9 +8,56 @@ nonisolated enum LaunchAgentManager {
         NSHomeDirectory() + "/Library/LaunchAgents/\(plistLabel).plist"
     }
 
+    /// Project root derived from source file location at compile time.
+    /// LaunchAgentManager.swift → Utilities/ → OvertimeTracker/ → OvertimeTracker/ → overtime-tracker/
+    static let projectRoot: String = URL(fileURLWithPath: #filePath)
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .deletingLastPathComponent()
+        .path
+
+    static var pythonPath: String {
+        projectRoot + "/venv/bin/python"
+    }
+
     static var isInstalled: Bool {
         FileManager.default.fileExists(atPath: plistPath)
     }
+
+    static var isVenvReady: Bool {
+        FileManager.default.fileExists(atPath: pythonPath)
+    }
+
+    // MARK: - Install
+
+    /// Writes the LaunchAgent plist with correct paths to ~/Library/LaunchAgents/
+    static func install() throws {
+        guard isVenvReady else {
+            throw LaunchAgentError.venvNotFound(pythonPath)
+        }
+
+        let plist: NSDictionary = [
+            "Label": plistLabel,
+            "ProgramArguments": [pythonPath, "-m", "src.main"],
+            "RunAtLoad": true,
+            "KeepAlive": true,
+            "StandardOutPath": "/tmp/overtime-tracker.stdout.log",
+            "StandardErrorPath": "/tmp/overtime-tracker.stderr.log",
+            "WorkingDirectory": projectRoot,
+        ]
+
+        let launchAgentsDir = (plistPath as NSString).deletingLastPathComponent
+        try FileManager.default.createDirectory(
+            atPath: launchAgentsDir, withIntermediateDirectories: true
+        )
+
+        guard plist.write(toFile: plistPath, atomically: true) else {
+            throw LaunchAgentError.writeFailed(plistPath)
+        }
+    }
+
+    // MARK: - Load / Unload
 
     /// Checks if the daemon is currently loaded via `launchctl list`
     static func isDaemonRunning() -> Bool {
@@ -28,9 +75,11 @@ nonisolated enum LaunchAgentManager {
         }
     }
 
-    /// Loads the LaunchAgent plist
+    /// Loads the LaunchAgent plist, auto-installing if not present
     static func load() throws {
-        guard isInstalled else { return }
+        if !isInstalled {
+            try install()
+        }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/launchctl")
         process.arguments = ["load", plistPath]
@@ -46,5 +95,21 @@ nonisolated enum LaunchAgentManager {
         process.arguments = ["unload", plistPath]
         try process.run()
         process.waitUntilExit()
+    }
+
+    // MARK: - Errors
+
+    enum LaunchAgentError: LocalizedError {
+        case venvNotFound(String)
+        case writeFailed(String)
+
+        var errorDescription: String? {
+            switch self {
+            case .venvNotFound(let path):
+                return "Python-venv nicht gefunden: \(path)"
+            case .writeFailed(let path):
+                return "Konnte LaunchAgent nicht schreiben: \(path)"
+            }
+        }
     }
 }
