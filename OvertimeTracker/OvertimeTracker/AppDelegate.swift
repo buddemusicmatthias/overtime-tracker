@@ -10,11 +10,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var dashboardViewModel: DashboardViewModel?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        terminateOtherInstances()
         setupStatusItem()
         setupPopover()
         viewModel.onOpenDashboard = { [weak self] in self?.openDashboard() }
         viewModel.startObserving()
         observeStatusBarText()
+    }
+
+    /// Terminates any already-running instances of this app (e.g. leftover from previous Xcode run)
+    private func terminateOtherInstances() {
+        let myPID = ProcessInfo.processInfo.processIdentifier
+        let bundleID = Bundle.main.bundleIdentifier ?? ""
+        for app in NSRunningApplication.runningApplications(withBundleIdentifier: bundleID) where app.processIdentifier != myPID {
+            app.terminate()
+        }
     }
 
     // MARK: - Setup

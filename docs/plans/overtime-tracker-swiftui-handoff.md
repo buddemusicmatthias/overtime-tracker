@@ -343,11 +343,12 @@ Bugfixes und Verbesserungen aus manuellem Testing nach Phase 3.
 
 ### Phase 5: Export + Polish
 
-- CSV-Export mit App-Aufschlüsselung (App-Daten pro Tag im Export ergänzen)
+- [x] CSV-Export redesigned: Tidy-Format mit einer Zeile pro App pro Kategorie pro Tag (`Datum;App;Minuten;Kategorie`)
+- [x] Export-Preview zeigt 5 Zeilen im neuen Format mit Summary-Zeile (Tage/Apps/Zeilen)
+- [x] Testdaten-Seed auf 2 Wochen reduziert (2026-02-17 bis 2026-03-02), reproduzierbar via `random.seed(42)`
 - PDF-Report (optional)
 - App-Icon
 - Launch at Login Integration
-- Testdaten-Seed erweitern (Edge Cases: leere Tage, Wochenend-Arbeit, keine Overtime)
 - Finale Tests
 
 ---

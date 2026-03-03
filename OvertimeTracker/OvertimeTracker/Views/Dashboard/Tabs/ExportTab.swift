@@ -1,11 +1,35 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+/// A single unpivoted row for the export preview
+private struct ExportRow: Identifiable {
+    let id = UUID()
+    let date: String
+    let appName: String
+    let minutes: Int
+    let category: String
+}
+
 struct ExportTab: View {
     var viewModel: DashboardViewModel
     @State private var exportStart: Date = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
     @State private var exportEnd: Date = Date()
     @State private var exportMessage: String?
+
+    /// First 5 unpivoted rows for preview
+    private var previewRows: [ExportRow] {
+        var rows: [ExportRow] = []
+        for row in viewModel.exportAppData {
+            if row.regularMinutes > 0 {
+                rows.append(ExportRow(date: row.date, appName: row.appName, minutes: Int(row.regularMinutes), category: "regular"))
+            }
+            if row.overtimeMinutes > 0 {
+                rows.append(ExportRow(date: row.date, appName: row.appName, minutes: Int(row.overtimeMinutes), category: "overtime"))
+            }
+            if rows.count >= 5 { break }
+        }
+        return Array(rows.prefix(5))
+    }
 
     var body: some View {
         ScrollView {
@@ -64,7 +88,7 @@ struct ExportTab: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(.otBlue)
-            .disabled(viewModel.exportSummaries.isEmpty)
+            .disabled(viewModel.exportAppData.isEmpty)
 
             if let message = exportMessage {
                 Text(message)
@@ -74,7 +98,7 @@ struct ExportTab: View {
 
             Spacer()
 
-            Text("\(viewModel.exportSummaries.count) Tage")
+            Text("\(viewModel.exportDayCount) Tage · \(viewModel.exportAppCount) Apps · \(viewModel.exportRowCount) Zeilen")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -85,7 +109,7 @@ struct ExportTab: View {
             Text("Vorschau")
                 .font(.headline)
 
-            if viewModel.exportSummaries.isEmpty {
+            if viewModel.exportAppData.isEmpty {
                 Text("Keine Daten im gewählten Zeitraum")
                     .foregroundStyle(.secondary)
                     .padding(.vertical, 20)
@@ -98,39 +122,39 @@ struct ExportTab: View {
     private var previewGrid: some View {
         Grid(alignment: .leading, horizontalSpacing: 16, verticalSpacing: 4) {
             GridRow {
-                Text("Datum").fontWeight(.semibold)
-                Text("Tag").fontWeight(.semibold)
-                Text("Aktiv").fontWeight(.semibold)
-                Text("Overtime").fontWeight(.semibold)
-                Text("Erster").fontWeight(.semibold)
-                Text("Letzter").fontWeight(.semibold)
+                Text("date").fontWeight(.semibold)
+                Text("app").fontWeight(.semibold)
+                Text("time").fontWeight(.semibold)
+                Text("category").fontWeight(.semibold)
             }
             .font(.caption)
             .foregroundStyle(.secondary)
 
             Divider()
 
-            ForEach(Array(viewModel.exportSummaries.enumerated()), id: \.offset) { _, s in
-                previewRow(s)
+            ForEach(previewRows) { row in
+                GridRow {
+                    Text(Formatters.shortDate(row.date))
+                    Text(row.appName)
+                    Text("\(row.minutes)")
+                        .foregroundStyle(Color.otBlue)
+                    Text(row.category)
+                        .foregroundStyle(row.category == "overtime" ? Color.otRed : Color.otBlue)
+                }
+                .font(.caption.monospaced())
+            }
+
+            if viewModel.exportRowCount > 5 {
+                GridRow {
+                    Text("…")
+                        .foregroundStyle(.secondary)
+                    Text("")
+                    Text("")
+                    Text("")
+                }
+                .font(.caption)
             }
         }
-    }
-
-    private func previewRow(_ s: DailySummary) -> some View {
-        let dayNames = ["", "So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"]
-        return GridRow {
-            Text(Formatters.shortDate(s.date))
-            Text(s.dayOfWeek >= 1 && s.dayOfWeek <= 7 ? dayNames[s.dayOfWeek] : "?")
-            Text(Formatters.formatMinutes(s.totalActiveMinutes))
-                .foregroundStyle(Color.otBlue)
-            Text(Formatters.formatMinutes(s.overtimeMinutes))
-                .foregroundStyle(Color.otRed)
-            Text(s.firstActivity.map(Formatters.formatTime) ?? "—")
-                .foregroundStyle(Color.otGreen)
-            Text(s.lastActivity.map(Formatters.formatTime) ?? "—")
-                .foregroundStyle(Color.otGreen)
-        }
-        .font(.caption.monospaced())
     }
 
     private func exportCSV() {

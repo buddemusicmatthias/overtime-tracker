@@ -29,7 +29,7 @@ final class DashboardViewModel {
     // MARK: - Export
     var exportStart: Date = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
     var exportEnd: Date = Date()
-    var exportSummaries: [DailySummary] = []
+    var exportAppData: [AppDailySummary] = []
 
     private var todayTask: Task<Void, Never>?
     private var todayAppsTask: Task<Void, Never>?
@@ -58,6 +58,23 @@ final class DashboardViewModel {
 
     var monthWorkDays: Int {
         monthSummaries.filter { $0.totalActiveMinutes > 0 }.count
+    }
+
+    // MARK: - Export Computed
+
+    var exportDayCount: Int {
+        Set(exportAppData.map(\.date)).count
+    }
+
+    var exportAppCount: Int {
+        Set(exportAppData.map(\.appName)).count
+    }
+
+    /// Number of CSV rows after unpivoting (each row can produce up to 2 lines)
+    var exportRowCount: Int {
+        exportAppData.reduce(0) { count, row in
+            count + (row.regularMinutes > 0 ? 1 : 0) + (row.overtimeMinutes > 0 ? 1 : 0)
+        }
     }
 
     var cumulativeOvertime: [(date: String, cumulative: Double)] {
@@ -103,13 +120,13 @@ final class DashboardViewModel {
 
         Task { @MainActor [weak self] in
             do {
-                let summaries = try await pool.read { db in
-                    try DailySummary
+                let appData = try await pool.read { db in
+                    try AppDailySummary
                         .filter(Column("date") >= start && Column("date") <= end)
-                        .order(Column("date"))
+                        .order(Column("date"), Column("app_name"))
                         .fetchAll(db)
                 }
-                self?.exportSummaries = summaries
+                self?.exportAppData = appData
             } catch {
                 print("[Dashboard] Export load error: \(error)")
             }
@@ -119,13 +136,14 @@ final class DashboardViewModel {
     // MARK: - CSV Export
 
     func generateCSV() -> String {
-        var lines = ["Datum;Wochentag;Aktiv (min);Idle (min);Overtime (min);Erster;Letzter"]
-        let dayNames = ["", "So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"]
-        for s in exportSummaries {
-            let day = s.dayOfWeek >= 1 && s.dayOfWeek <= 7 ? dayNames[s.dayOfWeek] : "?"
-            let first = s.firstActivity ?? ""
-            let last = s.lastActivity ?? ""
-            lines.append("\(s.date);\(day);\(Int(s.totalActiveMinutes));\(Int(s.totalIdleMinutes));\(Int(s.overtimeMinutes));\(first);\(last)")
+        var lines = ["date;app;time;category"]
+        for row in exportAppData {
+            if row.regularMinutes > 0 {
+                lines.append("\(row.date);\(row.appName);\(Int(row.regularMinutes));regular")
+            }
+            if row.overtimeMinutes > 0 {
+                lines.append("\(row.date);\(row.appName);\(Int(row.overtimeMinutes));overtime")
+            }
         }
         return lines.joined(separator: "\n")
     }

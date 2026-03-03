@@ -23,7 +23,8 @@ final class DatabaseManager {
 
         do {
             var config = Configuration()
-            config.readonly = true
+            // Not using readonly: SQLite WAL mode needs write access to create -wal/-shm files,
+            // even for read-only usage. The app only reads; Python daemon writes.
             config.prepareDatabase { db in
                 try db.execute(sql: "PRAGMA busy_timeout = 5000")
             }
@@ -31,7 +32,7 @@ final class DatabaseManager {
             let pool = try DatabasePool(path: path, configuration: config)
             dbPool = pool
             isConnected = true
-            print("[DB] Connected read-only to \(path)")
+            print("[DB] Connected to \(path)")
         } catch {
             print("[DB] Error opening database: \(error)")
             dbPool = nil
