@@ -31,12 +31,7 @@ final class DashboardViewModel {
     var exportEnd: Date = Date()
     var exportAppData: [AppDailySummary] = []
 
-    private var todayTask: Task<Void, Never>?
-    private var todayAppsTask: Task<Void, Never>?
-    private var weekTask: Task<Void, Never>?
-    private var weekAppsTask: Task<Void, Never>?
-    private var monthTask: Task<Void, Never>?
-    private var monthAppsTask: Task<Void, Never>?
+    private var pollingTask: Task<Void, Never>?
 
     // MARK: - Computed
 
@@ -83,25 +78,25 @@ final class DashboardViewModel {
     func startObserving() {
         guard let pool = DatabaseManager.shared.dbPool else { return }
 
-        observeToday(pool: pool)
-        observeWeek(pool: pool)
-        observeMonth(pool: pool)
+        pollingTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self else { break }
+                await self.pollAll(pool: pool)
+                try? await Task.sleep(for: .seconds(15))
+            }
+        }
     }
 
     func stopObserving() {
-        todayTask?.cancel()
-        todayAppsTask?.cancel()
-        weekTask?.cancel()
-        weekAppsTask?.cancel()
-        monthTask?.cancel()
-        monthAppsTask?.cancel()
+        pollingTask?.cancel()
+        pollingTask = nil
     }
 
     func reloadMonth() {
         guard let pool = DatabaseManager.shared.dbPool else { return }
-        monthTask?.cancel()
-        monthAppsTask?.cancel()
-        observeMonth(pool: pool)
+        Task { [weak self] in
+            await self?.pollMonth(pool: pool)
+        }
     }
 
     func loadExportData() {
@@ -141,105 +136,64 @@ final class DashboardViewModel {
         return lines.joined(separator: "\n")
     }
 
-    // MARK: - Private Observations
+    // MARK: - Polling
 
-    private func observeToday(pool: DatabasePool) {
+    private func pollAll(pool: DatabasePool) async {
         let today = DatabaseManager.todayString()
-
-        todayTask = Task { [weak self] in
-            do {
-                let observation = ValueObservation.tracking { db in
-                    try DailySummary.filter(Column("date") == today).fetchOne(db)
-                }
-                for try await summary in observation.values(in: pool) {
-                    self?.todaySummary = summary
-                }
-            } catch {
-                if !Task.isCancelled { print("[Dashboard] Today error: \(error)") }
-            }
-        }
-
-        todayAppsTask = Task { [weak self] in
-            do {
-                let observation = ValueObservation.tracking { db in
-                    try AppDailySummary
-                        .filter(Column("date") == today)
-                        .order(Column("active_minutes").desc)
-                        .limit(8)
-                        .fetchAll(db)
-                }
-                for try await apps in observation.values(in: pool) {
-                    self?.todayApps = apps
-                }
-            } catch {
-                if !Task.isCancelled { print("[Dashboard] Today apps error: \(error)") }
-            }
-        }
-    }
-
-    private func observeWeek(pool: DatabasePool) {
         let (weekStart, weekEnd) = Formatters.weekRange()
-
-        weekTask = Task { [weak self] in
-            do {
-                let observation = ValueObservation.tracking { db in
-                    try DailySummary
-                        .filter(Column("date") >= weekStart && Column("date") <= weekEnd)
-                        .order(Column("date"))
-                        .fetchAll(db)
-                }
-                for try await summaries in observation.values(in: pool) {
-                    self?.weekSummaries = summaries
-                }
-            } catch {
-                if !Task.isCancelled { print("[Dashboard] Week error: \(error)") }
-            }
-        }
-
-        weekAppsTask = Task { [weak self] in
-            do {
-                let observation = ValueObservation.tracking { db in
-                    try self?.fetchAppRangeSummaries(db: db, start: weekStart, end: weekEnd) ?? []
-                }
-                for try await apps in observation.values(in: pool) {
-                    self?.weekApps = apps
-                }
-            } catch {
-                if !Task.isCancelled { print("[Dashboard] Week apps error: \(error)") }
-            }
-        }
-    }
-
-    private func observeMonth(pool: DatabasePool) {
         let (monthStart, monthEnd) = Formatters.monthRange(for: selectedMonth)
 
-        monthTask = Task { [weak self] in
-            do {
-                let observation = ValueObservation.tracking { db in
-                    try DailySummary
-                        .filter(Column("date") >= monthStart && Column("date") <= monthEnd)
-                        .order(Column("date"))
-                        .fetchAll(db)
-                }
-                for try await summaries in observation.values(in: pool) {
-                    self?.monthSummaries = summaries
-                }
-            } catch {
-                if !Task.isCancelled { print("[Dashboard] Month error: \(error)") }
-            }
-        }
+        do {
+            let result = try await pool.read { [self] db in
+                let todaySummary = try DailySummary
+                    .filter(Column("date") == today)
+                    .fetchOne(db)
+                let todayApps = try AppDailySummary
+                    .filter(Column("date") == today)
+                    .order(Column("active_minutes").desc)
+                    .limit(8)
+                    .fetchAll(db)
+                let weekSummaries = try DailySummary
+                    .filter(Column("date") >= weekStart && Column("date") <= weekEnd)
+                    .order(Column("date"))
+                    .fetchAll(db)
+                let weekApps = try self.fetchAppRangeSummaries(db: db, start: weekStart, end: weekEnd)
+                let monthSummaries = try DailySummary
+                    .filter(Column("date") >= monthStart && Column("date") <= monthEnd)
+                    .order(Column("date"))
+                    .fetchAll(db)
+                let monthApps = try self.fetchAppRangeSummaries(db: db, start: monthStart, end: monthEnd)
 
-        monthAppsTask = Task { [weak self] in
-            do {
-                let observation = ValueObservation.tracking { db in
-                    try self?.fetchAppRangeSummaries(db: db, start: monthStart, end: monthEnd) ?? []
-                }
-                for try await apps in observation.values(in: pool) {
-                    self?.monthApps = apps
-                }
-            } catch {
-                if !Task.isCancelled { print("[Dashboard] Month apps error: \(error)") }
+                return (todaySummary, todayApps, weekSummaries, weekApps, monthSummaries, monthApps)
             }
+
+            self.todaySummary = result.0
+            self.todayApps = result.1
+            self.weekSummaries = result.2
+            self.weekApps = result.3
+            self.monthSummaries = result.4
+            self.monthApps = result.5
+        } catch {
+            if !Task.isCancelled { print("[Dashboard] Poll error: \(error)") }
+        }
+    }
+
+    private func pollMonth(pool: DatabasePool) async {
+        let (monthStart, monthEnd) = Formatters.monthRange(for: selectedMonth)
+
+        do {
+            let (summaries, apps) = try await pool.read { [self] db in
+                let summaries = try DailySummary
+                    .filter(Column("date") >= monthStart && Column("date") <= monthEnd)
+                    .order(Column("date"))
+                    .fetchAll(db)
+                let apps = try self.fetchAppRangeSummaries(db: db, start: monthStart, end: monthEnd)
+                return (summaries, apps)
+            }
+            self.monthSummaries = summaries
+            self.monthApps = apps
+        } catch {
+            if !Task.isCancelled { print("[Dashboard] Month poll error: \(error)") }
         }
     }
 

@@ -46,12 +46,5 @@ def poll_and_log():
     )
 
     log_activity(record)
-
-    # Update daily summaries every 20 polls (~5 minutes at 15s interval)
-    if not hasattr(poll_and_log, "_counter"):
-        poll_and_log._counter = 0
-    poll_and_log._counter += 1
-    if poll_and_log._counter >= 20:
-        poll_and_log._counter = 0
-        update_daily_summaries()
-        config.reload_from_db()
+    update_daily_summaries()
+    config.reload_from_db()

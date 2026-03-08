@@ -12,9 +12,7 @@ final class PopoverViewModel {
     var onOpenDashboard: (() -> Void)?
     var onOpenSettings: (() -> Void)?
 
-    private var summaryObservationTask: Task<Void, Never>?
-    private var weekObservationTask: Task<Void, Never>?
-    private var appsObservationTask: Task<Void, Never>?
+    private var pollingTask: Task<Void, Never>?
 
     var statusBarText: String {
         guard let summary = todaySummary else { return "—:— OT" }
@@ -77,69 +75,52 @@ final class PopoverViewModel {
     }
 
     func startObserving() {
-        let db = DatabaseManager.shared
-        guard let pool = db.dbPool else {
+        guard let pool = DatabaseManager.shared.dbPool else {
             isConnected = false
-            print("[ViewModel] No database connection")
+            print("[Popover] No database connection")
             return
         }
 
         isConnected = true
         isDaemonRunning = LaunchAgentManager.isDaemonRunning()
-        let today = DatabaseManager.todayString()
 
-        summaryObservationTask = Task { [weak self] in
-            do {
-                let observation = ValueObservation.tracking { db in
-                    try DailySummary.filter(Column("date") == today).fetchOne(db)
-                }
-                for try await summary in observation.values(in: pool) {
-                    self?.todaySummary = summary
-                }
-            } catch {
-                print("[ViewModel] Summary observation error: \(error)")
-            }
-        }
+        pollingTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let self else { break }
+                let today = DatabaseManager.todayString()
+                let (weekStart, weekEnd) = Self.currentWeekRange()
 
-        let (weekStart, weekEnd) = Self.currentWeekRange()
-        weekObservationTask = Task { [weak self] in
-            do {
-                let observation = ValueObservation.tracking { db in
-                    try DailySummary
-                        .filter(Column("date") >= weekStart && Column("date") <= weekEnd)
-                        .order(Column("date"))
-                        .fetchAll(db)
+                do {
+                    let (summary, week, apps) = try await pool.read { db in
+                        let summary = try DailySummary
+                            .filter(Column("date") == today)
+                            .fetchOne(db)
+                        let week = try DailySummary
+                            .filter(Column("date") >= weekStart && Column("date") <= weekEnd)
+                            .order(Column("date"))
+                            .fetchAll(db)
+                        let apps = try AppDailySummary
+                            .filter(Column("date") == today)
+                            .order(Column("active_minutes").desc)
+                            .limit(5)
+                            .fetchAll(db)
+                        return (summary, week, apps)
+                    }
+                    self.todaySummary = summary
+                    self.weekSummaries = week
+                    self.topApps = apps
+                } catch {
+                    print("[Popover] Poll error: \(error)")
                 }
-                for try await summaries in observation.values(in: pool) {
-                    self?.weekSummaries = summaries
-                }
-            } catch {
-                print("[ViewModel] Week observation error: \(error)")
-            }
-        }
 
-        appsObservationTask = Task { [weak self] in
-            do {
-                let observation = ValueObservation.tracking { db in
-                    try AppDailySummary
-                        .filter(Column("date") == today)
-                        .order(Column("active_minutes").desc)
-                        .limit(5)
-                        .fetchAll(db)
-                }
-                for try await apps in observation.values(in: pool) {
-                    self?.topApps = apps
-                }
-            } catch {
-                print("[ViewModel] Apps observation error: \(error)")
+                try? await Task.sleep(for: .seconds(15))
             }
         }
     }
 
     func stopObserving() {
-        summaryObservationTask?.cancel()
-        weekObservationTask?.cancel()
-        appsObservationTask?.cancel()
+        pollingTask?.cancel()
+        pollingTask = nil
     }
 
     func refreshDaemonStatus() {
