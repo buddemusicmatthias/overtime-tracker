@@ -142,6 +142,10 @@ final class PopoverViewModel {
         appsObservationTask?.cancel()
     }
 
+    func refreshDaemonStatus() {
+        isDaemonRunning = LaunchAgentManager.isDaemonRunning()
+    }
+
     // MARK: - Week Range
 
     static func currentWeekRange() -> (start: String, end: String) {
