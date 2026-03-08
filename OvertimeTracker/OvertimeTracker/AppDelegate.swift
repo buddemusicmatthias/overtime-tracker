@@ -12,7 +12,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindow: NSWindow?
     private var settingsViewModel: SettingsViewModel?
 
+    /// Prevents macOS App Nap from suspending our polling timer.
+    /// Stored to keep the activity assertion alive for the app's lifetime.
+    private var activityToken: NSObjectProtocol?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
+        activityToken = ProcessInfo.processInfo.beginActivity(
+            options: .userInitiatedAllowingIdleSystemSleep,
+            reason: "Polling overtime database every 15s"
+        )
         terminateOtherInstances()
         applyDockVisibility()
         setupStatusItem()
