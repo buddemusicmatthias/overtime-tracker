@@ -56,3 +56,14 @@ To build a distributable zip for others (no Xcode needed on their end):
    └── requirements.txt      ← from repo root
    ```
 3. Recipient runs: `chmod +x setup.sh && ./setup.sh`, then opens the app (right-click → Open the first time for Gatekeeper)
+
+### Updating the daemon on a remote machine (no Xcode needed)
+
+When only `src/` has changed (no Swift changes), the .app doesn't need to be rebuilt:
+
+1. Copy the updated `src/` folder to the machine (replace existing)
+2. Restart the daemon: toggle "Launch at Login" off/on in Settings, or:
+   ```bash
+   launchctl kickstart -k gui/$(id -u)/com.overtime-tracker.daemon
+   ```
+3. Verify via `tail -f /tmp/overtime-tracker.stderr.log`
