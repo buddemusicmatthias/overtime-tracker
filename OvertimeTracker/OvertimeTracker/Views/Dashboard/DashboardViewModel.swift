@@ -12,6 +12,7 @@ struct AppRangeSummary: Identifiable, Sendable {
 }
 
 @Observable
+@MainActor
 final class DashboardViewModel {
     // MARK: - Today
     var todaySummary: DailySummary?

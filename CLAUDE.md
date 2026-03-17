@@ -42,6 +42,10 @@ tail -f /tmp/overtime-tracker.stderr.log      # Daemon logs
 - Idle timeout: Default 10 minutes (configurable)
 - Polling interval: 15 seconds
 
+## TODOs
+- Monitor CPU/energy usage with `update_daily_summaries()` running every 15s poll cycle (was previously batched to every ~5 min). If it causes noticeable CPU or battery drain, reintroduce batching (e.g. every 4 polls = ~1 min).
+- Add `@MainActor` annotation to `PopoverViewModel` and `DashboardViewModel` to guarantee UI property updates happen on the main thread (currently relies on implicit actor inheritance).
+
 ## Distribution (internal)
 
 To build a distributable zip for others (no Xcode needed on their end):
@@ -56,3 +60,14 @@ To build a distributable zip for others (no Xcode needed on their end):
    └── requirements.txt      ← from repo root
    ```
 3. Recipient runs: `chmod +x setup.sh && ./setup.sh`, then opens the app (right-click → Open the first time for Gatekeeper)
+
+### Updating the daemon on a remote machine (no Xcode needed)
+
+When only `src/` has changed (no Swift changes), the .app doesn't need to be rebuilt:
+
+1. Copy the updated `src/` folder to the machine (replace existing)
+2. Restart the daemon: toggle "Launch at Login" off/on in Settings, or:
+   ```bash
+   launchctl kickstart -k gui/$(id -u)/com.overtime-tracker.daemon
+   ```
+3. Verify via `tail -f /tmp/overtime-tracker.stderr.log`
