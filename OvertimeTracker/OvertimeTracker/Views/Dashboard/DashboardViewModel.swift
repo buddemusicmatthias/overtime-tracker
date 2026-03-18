@@ -124,14 +124,26 @@ final class DashboardViewModel {
 
     // MARK: - CSV Export
 
+    /// Sanitises a string for safe CSV embedding.
+    /// Doubles any embedded quotes, strips leading formula-trigger characters,
+    /// and wraps the result in double quotes.
+    private func sanitizeCSVField(_ value: String) -> String {
+        var sanitized = value.replacingOccurrences(of: "\"", with: "\"\"")
+        while let first = sanitized.first, "=+\u{2d}@".contains(first) {
+            sanitized.removeFirst()
+        }
+        return "\"\(sanitized)\""
+    }
+
     func generateCSV() -> String {
         var lines = ["date;app;time;category"]
         for row in exportAppData {
+            let safeApp = sanitizeCSVField(row.appName)
             if row.regularMinutes > 0 {
-                lines.append("\(row.date);\(row.appName);\(Int(row.regularMinutes));regular")
+                lines.append("\(row.date);\(safeApp);\(Int(row.regularMinutes));regular")
             }
             if row.overtimeMinutes > 0 {
-                lines.append("\(row.date);\(row.appName);\(Int(row.overtimeMinutes));overtime")
+                lines.append("\(row.date);\(safeApp);\(Int(row.overtimeMinutes));overtime")
             }
         }
         return lines.joined(separator: "\n")

@@ -1,3 +1,4 @@
+import os
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, date
@@ -89,7 +90,9 @@ def _migrate(conn: sqlite3.Connection):
 def get_connection() -> Iterator[sqlite3.Connection]:
     """Create a new SQLite connection with WAL mode enabled. Use as a context manager."""
     config.db_path.parent.mkdir(parents=True, exist_ok=True)
+    os.chmod(config.db_path.parent, 0o700)
     conn = sqlite3.connect(str(config.db_path))
+    os.chmod(config.db_path, 0o600)
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=5000")
     conn.row_factory = sqlite3.Row
@@ -311,15 +314,3 @@ def get_monthly_summaries(year: int, month: int) -> list[DailySummary]:
         for r in rows
     ]
 
-
-def export_csv(start_date: str, end_date: str) -> list[dict]:
-    """Export raw activity data as list of dicts for CSV generation."""
-    with get_connection() as conn:
-        rows = conn.execute(
-            """SELECT timestamp, app_name, bundle_id, is_idle, idle_seconds, poll_interval
-            FROM activity_log
-            WHERE date(timestamp) BETWEEN ? AND ?
-            ORDER BY timestamp""",
-            (start_date, end_date),
-        ).fetchall()
-    return [dict(r) for r in rows]

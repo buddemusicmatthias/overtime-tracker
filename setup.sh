@@ -8,6 +8,7 @@ OT_DIR="$HOME/.overtime-tracker"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 mkdir -p "$OT_DIR"
+chmod 700 "$OT_DIR"
 
 echo "→ Erstelle Python-venv..."
 python3 -m venv "$OT_DIR/venv"
