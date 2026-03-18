@@ -2,8 +2,8 @@ import Foundation
 import GRDB
 import Observation
 
-@Observable
 @MainActor
+@Observable
 final class PopoverViewModel {
     var todaySummary: DailySummary?
     var weekSummaries: [DailySummary] = []

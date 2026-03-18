@@ -3,6 +3,7 @@ import GRDB
 import Observation
 import ServiceManagement
 
+@MainActor
 @Observable
 final class SettingsViewModel {
     var settings = TrackerSettings()

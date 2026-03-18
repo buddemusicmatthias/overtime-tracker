@@ -26,7 +26,7 @@ venv/bin/python -m src.main
 
 # LaunchAgent (managed by Swift app's "Launch at Login" toggle)
 launchctl list | grep overtime                # Status
-tail -f /tmp/overtime-tracker.stderr.log      # Daemon logs
+tail -f ~/.overtime-tracker/daemon.stderr.log  # Daemon logs
 ```
 
 ## Conventions
