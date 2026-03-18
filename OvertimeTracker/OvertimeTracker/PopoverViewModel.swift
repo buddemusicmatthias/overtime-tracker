@@ -1,6 +1,9 @@
 import Foundation
 import GRDB
 import Observation
+import os
+
+private let logger = Logger(subsystem: "com.overtime-tracker", category: "Popover")
 
 @MainActor
 @Observable
@@ -78,7 +81,7 @@ final class PopoverViewModel {
     func startObserving() {
         guard let pool = DatabaseManager.shared.dbPool else {
             isConnected = false
-            print("[Popover] No database connection")
+            logger.warning("No database connection")
             return
         }
 
@@ -111,7 +114,7 @@ final class PopoverViewModel {
                     self.weekSummaries = week
                     self.topApps = apps
                 } catch {
-                    print("[Popover] Poll error: \(error)")
+                    logger.error("Poll error: \(error)")
                 }
 
                 try? await Task.sleep(for: .seconds(15))

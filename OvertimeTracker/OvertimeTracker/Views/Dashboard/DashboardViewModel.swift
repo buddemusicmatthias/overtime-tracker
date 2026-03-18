@@ -1,6 +1,7 @@
 import Foundation
 import GRDB
 import Observation
+import os
 
 /// Aggregated app data across a date range
 struct AppRangeSummary: Identifiable, Sendable {
@@ -10,6 +11,8 @@ struct AppRangeSummary: Identifiable, Sendable {
     let regularMinutes: Double
     let overtimeMinutes: Double
 }
+
+private let logger = Logger(subsystem: "com.overtime-tracker", category: "Dashboard")
 
 @Observable
 @MainActor
@@ -117,7 +120,7 @@ final class DashboardViewModel {
                 }
                 self?.exportAppData = appData
             } catch {
-                print("[Dashboard] Export load error: \(error)")
+                logger.error("Export load error: \(error)")
             }
         }
     }
@@ -187,7 +190,7 @@ final class DashboardViewModel {
             self.monthSummaries = result.4
             self.monthApps = result.5
         } catch {
-            if !Task.isCancelled { print("[Dashboard] Poll error: \(error)") }
+            if !Task.isCancelled { logger.error("Poll error: \(error)") }
         }
     }
 
@@ -206,7 +209,7 @@ final class DashboardViewModel {
             self.monthSummaries = summaries
             self.monthApps = apps
         } catch {
-            if !Task.isCancelled { print("[Dashboard] Month poll error: \(error)") }
+            if !Task.isCancelled { logger.error("Month poll error: \(error)") }
         }
     }
 

@@ -44,7 +44,6 @@ tail -f ~/.overtime-tracker/daemon.stderr.log  # Daemon logs
 
 ## TODOs
 - Monitor CPU/energy usage with `update_daily_summaries()` running every 15s poll cycle (was previously batched to every ~5 min). If it causes noticeable CPU or battery drain, reintroduce batching (e.g. every 4 polls = ~1 min).
-- Add `@MainActor` annotation to `PopoverViewModel` and `DashboardViewModel` to guarantee UI property updates happen on the main thread (currently relies on implicit actor inheritance).
 
 ## Distribution (internal)
 

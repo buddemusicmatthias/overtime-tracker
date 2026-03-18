@@ -85,7 +85,7 @@ struct PopoverView: View {
 
             HStack(spacing: 8) {
                 Button {
-                    print("[Stub] Tracking pausieren")
+                    // TODO: implement pause tracking
                 } label: {
                     Text("Tracking pausieren")
                         .font(.caption)
