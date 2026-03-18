@@ -48,7 +48,9 @@ CREATE TABLE IF NOT EXISTS app_daily_summary (
 CREATE TABLE IF NOT EXISTS settings (
     id                   INTEGER PRIMARY KEY CHECK (id = 1),
     core_start_hour      INTEGER NOT NULL DEFAULT 9,
+    core_start_minute    INTEGER NOT NULL DEFAULT 0,
     core_end_hour        INTEGER NOT NULL DEFAULT 18,
+    core_end_minute      INTEGER NOT NULL DEFAULT 0,
     work_days            TEXT NOT NULL DEFAULT '0,1,2,3',
     idle_timeout_seconds INTEGER NOT NULL DEFAULT 600
 );
@@ -204,7 +206,7 @@ def main():
 
     conn = sqlite3.connect(str(DB_PATH))
     conn.executescript(SCHEMA_SQL)
-    conn.execute("PRAGMA user_version = 1")
+    conn.execute("PRAGMA user_version = 2")
 
     # Seed settings
     conn.execute("INSERT INTO settings (id) VALUES (1)")
