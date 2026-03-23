@@ -36,8 +36,8 @@ nonisolated enum LaunchAgentManager {
             "ProgramArguments": [pythonPath, "-m", "src.main"],
             "RunAtLoad": true,
             "KeepAlive": true,
-            "StandardOutPath": "/tmp/overtime-tracker.stdout.log",
-            "StandardErrorPath": "/tmp/overtime-tracker.stderr.log",
+            "StandardOutPath": "\(projectRoot)/daemon.stdout.log",
+            "StandardErrorPath": "\(projectRoot)/daemon.stderr.log",
             "WorkingDirectory": projectRoot,
         ]
 

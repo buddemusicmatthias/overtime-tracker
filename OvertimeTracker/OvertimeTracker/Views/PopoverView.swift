@@ -83,27 +83,15 @@ struct PopoverView: View {
             .buttonStyle(.borderedProminent)
             .tint(.otBlue)
 
-            HStack(spacing: 8) {
-                Button {
-                    print("[Stub] Tracking pausieren")
-                } label: {
-                    Text("Tracking pausieren")
-                        .font(.caption)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 6)
-                }
-                .buttonStyle(.bordered)
-
-                Button {
-                    viewModel.onOpenSettings?()
-                } label: {
-                    Image(systemName: "gearshape")
-                        .font(.caption)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 6)
-                }
-                .buttonStyle(.bordered)
+            Button {
+                viewModel.onOpenSettings?()
+            } label: {
+                Image(systemName: "gearshape")
+                    .font(.caption)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
             }
+            .buttonStyle(.bordered)
 
             if !viewModel.isConnected {
                 Label("DB nicht gefunden", systemImage: "exclamationmark.triangle")

@@ -1,6 +1,7 @@
 import Foundation
 import GRDB
 import Observation
+import os
 
 /// Aggregated app data across a date range
 struct AppRangeSummary: Identifiable, Sendable {
@@ -11,7 +12,10 @@ struct AppRangeSummary: Identifiable, Sendable {
     let overtimeMinutes: Double
 }
 
+private let logger = Logger(subsystem: "com.overtime-tracker", category: "Dashboard")
+
 @Observable
+@MainActor
 final class DashboardViewModel {
     // MARK: - Today
     var todaySummary: DailySummary?
@@ -116,21 +120,33 @@ final class DashboardViewModel {
                 }
                 self?.exportAppData = appData
             } catch {
-                print("[Dashboard] Export load error: \(error)")
+                logger.error("Export load error: \(error)")
             }
         }
     }
 
     // MARK: - CSV Export
 
+    /// Sanitises a string for safe CSV embedding.
+    /// Doubles any embedded quotes, prefixes formula-trigger characters with a
+    /// single quote (preventing spreadsheet formula execution), and wraps in double quotes.
+    private func sanitizeCSVField(_ value: String) -> String {
+        var sanitized = value.replacingOccurrences(of: "\"", with: "\"\"")
+        if let first = sanitized.first, "=+-@".contains(first) {
+            sanitized = "'" + sanitized
+        }
+        return "\"\(sanitized)\""
+    }
+
     func generateCSV() -> String {
         var lines = ["date;app;time;category"]
         for row in exportAppData {
+            let safeApp = sanitizeCSVField(row.appName)
             if row.regularMinutes > 0 {
-                lines.append("\(row.date);\(row.appName);\(Int(row.regularMinutes));regular")
+                lines.append("\(row.date);\(safeApp);\(Int(row.regularMinutes));regular")
             }
             if row.overtimeMinutes > 0 {
-                lines.append("\(row.date);\(row.appName);\(Int(row.overtimeMinutes));overtime")
+                lines.append("\(row.date);\(safeApp);\(Int(row.overtimeMinutes));overtime")
             }
         }
         return lines.joined(separator: "\n")
@@ -174,7 +190,7 @@ final class DashboardViewModel {
             self.monthSummaries = result.4
             self.monthApps = result.5
         } catch {
-            if !Task.isCancelled { print("[Dashboard] Poll error: \(error)") }
+            if !Task.isCancelled { logger.error("Poll error: \(error)") }
         }
     }
 
@@ -193,7 +209,7 @@ final class DashboardViewModel {
             self.monthSummaries = summaries
             self.monthApps = apps
         } catch {
-            if !Task.isCancelled { print("[Dashboard] Month poll error: \(error)") }
+            if !Task.isCancelled { logger.error("Month poll error: \(error)") }
         }
     }
 

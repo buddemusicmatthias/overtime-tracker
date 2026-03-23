@@ -1,8 +1,12 @@
 import Cocoa
 import GRDB
 import Observation
+import os
 import ServiceManagement
 
+private let logger = Logger(subsystem: "com.overtime-tracker", category: "Settings")
+
+@MainActor
 @Observable
 final class SettingsViewModel {
     var settings = TrackerSettings()
@@ -34,7 +38,7 @@ final class SettingsViewModel {
                     self?.settings = settings
                 }
             } catch {
-                if !Task.isCancelled { print("[Settings] Observation error: \(error)") }
+                if !Task.isCancelled { logger.error("Observation error: \(error)") }
             }
         }
     }
@@ -50,7 +54,7 @@ final class SettingsViewModel {
             do {
                 try await DatabaseManager.shared.saveSettings(settings)
             } catch {
-                print("[Settings] Save error: \(error)")
+                logger.error("Save error: \(error)")
             }
         }
     }
@@ -61,18 +65,18 @@ final class SettingsViewModel {
         if launchAtLogin {
             // Disable both: daemon LaunchAgent + Swift app login item
             do { try LaunchAgentManager.unload() } catch {
-                print("[Settings] LaunchAgent unload error: \(error)")
+                logger.error("LaunchAgent unload error: \(error)")
             }
             do { try SMAppService.mainApp.unregister() } catch {
-                print("[Settings] SMAppService unregister error: \(error)")
+                logger.error("SMAppService unregister error: \(error)")
             }
         } else {
             // Enable both: daemon LaunchAgent + Swift app login item
             do { try LaunchAgentManager.load() } catch {
-                print("[Settings] LaunchAgent load error: \(error)")
+                logger.error("LaunchAgent load error: \(error)")
             }
             do { try SMAppService.mainApp.register() } catch {
-                print("[Settings] SMAppService register error: \(error)")
+                logger.error("SMAppService register error: \(error)")
             }
         }
 
@@ -99,7 +103,7 @@ final class SettingsViewModel {
         do {
             try await DatabaseManager.shared.deleteAllData()
         } catch {
-            print("[Settings] Delete error: \(error)")
+            logger.error("Delete error: \(error)")
         }
     }
 

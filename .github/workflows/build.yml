@@ -1,0 +1,59 @@
+name: Build & Package
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: OvertimeTracker
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select latest Xcode
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          echo "Using: $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH"
+          xcodebuild -version
+
+      - name: Resolve packages
+        run: xcodebuild -resolvePackageDependencies -project OvertimeTracker.xcodeproj -scheme OvertimeTracker
+
+      - name: Build archive
+        run: |
+          xcodebuild archive \
+            -project OvertimeTracker.xcodeproj \
+            -scheme OvertimeTracker \
+            -configuration Release \
+            -archivePath $RUNNER_TEMP/OvertimeTracker.xcarchive \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Export app
+        run: |
+          mkdir -p $RUNNER_TEMP/export
+          cp -R $RUNNER_TEMP/OvertimeTracker.xcarchive/Products/Applications/OvertimeTracker.app $RUNNER_TEMP/export/
+
+      - name: Package distribution bundle
+        working-directory: ${{ runner.temp }}/export
+        run: |
+          cp $GITHUB_WORKSPACE/setup.sh .
+          cp -R $GITHUB_WORKSPACE/src .
+          cp $GITHUB_WORKSPACE/requirements.txt .
+          zip -r $RUNNER_TEMP/OvertimeTracker.zip OvertimeTracker.app setup.sh src requirements.txt
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OvertimeTracker
+          path: ${{ runner.temp }}/OvertimeTracker.zip
+          retention-days: 30

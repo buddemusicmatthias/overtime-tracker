@@ -1,3 +1,4 @@
+import os
 import sqlite3
 from contextlib import contextmanager
 from datetime import datetime, date
@@ -89,7 +90,9 @@ def _migrate(conn: sqlite3.Connection):
 def get_connection() -> Iterator[sqlite3.Connection]:
     """Create a new SQLite connection with WAL mode enabled. Use as a context manager."""
     config.db_path.parent.mkdir(parents=True, exist_ok=True)
+    os.chmod(config.db_path.parent, 0o700)
     conn = sqlite3.connect(str(config.db_path))
+    os.chmod(config.db_path, 0o600)
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA busy_timeout=5000")
     conn.row_factory = sqlite3.Row
@@ -229,6 +232,17 @@ def update_daily_summaries(target_date: str | None = None):
         conn.commit()
 
 
+def _row_to_summary(r: sqlite3.Row) -> DailySummary:
+    return DailySummary(
+        date=r["date"], day_of_week=r["day_of_week"],
+        total_active_minutes=r["total_active_minutes"],
+        total_idle_minutes=r["total_idle_minutes"],
+        overtime_minutes=r["overtime_minutes"],
+        first_activity=r["first_activity"], last_activity=r["last_activity"],
+        work_category=r["work_category"],
+    )
+
+
 def get_daily_summary(target_date: str) -> DailySummary | None:
     """Get the daily summary for a given date."""
     with get_connection() as conn:
@@ -237,16 +251,7 @@ def get_daily_summary(target_date: str) -> DailySummary | None:
         ).fetchone()
     if row is None:
         return None
-    return DailySummary(
-        date=row["date"],
-        day_of_week=row["day_of_week"],
-        total_active_minutes=row["total_active_minutes"],
-        total_idle_minutes=row["total_idle_minutes"],
-        overtime_minutes=row["overtime_minutes"],
-        first_activity=row["first_activity"],
-        last_activity=row["last_activity"],
-        work_category=row["work_category"],
-    )
+    return _row_to_summary(row)
 
 
 def get_week_summaries(iso_year: int, iso_week: int) -> list[DailySummary]:
@@ -258,17 +263,7 @@ def get_week_summaries(iso_year: int, iso_week: int) -> list[DailySummary]:
             ORDER BY date""",
             (str(iso_year), f"{iso_week:02d}"),
         ).fetchall()
-    return [
-        DailySummary(
-            date=r["date"], day_of_week=r["day_of_week"],
-            total_active_minutes=r["total_active_minutes"],
-            total_idle_minutes=r["total_idle_minutes"],
-            overtime_minutes=r["overtime_minutes"],
-            first_activity=r["first_activity"], last_activity=r["last_activity"],
-            work_category=r["work_category"],
-        )
-        for r in rows
-    ]
+    return [_row_to_summary(r) for r in rows]
 
 
 def get_app_summaries(target_date: str) -> list[AppSummary]:
@@ -299,27 +294,5 @@ def get_monthly_summaries(year: int, month: int) -> list[DailySummary]:
             ORDER BY date""",
             (str(year), f"{month:02d}"),
         ).fetchall()
-    return [
-        DailySummary(
-            date=r["date"], day_of_week=r["day_of_week"],
-            total_active_minutes=r["total_active_minutes"],
-            total_idle_minutes=r["total_idle_minutes"],
-            overtime_minutes=r["overtime_minutes"],
-            first_activity=r["first_activity"], last_activity=r["last_activity"],
-            work_category=r["work_category"],
-        )
-        for r in rows
-    ]
+    return [_row_to_summary(r) for r in rows]
 
-
-def export_csv(start_date: str, end_date: str) -> list[dict]:
-    """Export raw activity data as list of dicts for CSV generation."""
-    with get_connection() as conn:
-        rows = conn.execute(
-            """SELECT timestamp, app_name, bundle_id, is_idle, idle_seconds, poll_interval
-            FROM activity_log
-            WHERE date(timestamp) BETWEEN ? AND ?
-            ORDER BY timestamp""",
-            (start_date, end_date),
-        ).fetchall()
-    return [dict(r) for r in rows]

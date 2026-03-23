@@ -38,3 +38,6 @@ env_vars.env
 
 # internal
 docs/
+
+# Dolt database files (added by bd init)
+.dolt/

@@ -1,5 +1,8 @@
 import Foundation
 import GRDB
+import os
+
+private let logger = Logger(subsystem: "com.overtime-tracker", category: "DB")
 
 final class DatabaseManager {
     static let shared = DatabaseManager()
@@ -15,7 +18,7 @@ final class DatabaseManager {
         let path = Self.dbPath
 
         guard FileManager.default.fileExists(atPath: path) else {
-            print("[DB] Database not found at \(path)")
+            logger.warning("Database not found at \(path, privacy: .public)")
             dbPool = nil
             isConnected = false
             return
@@ -32,9 +35,9 @@ final class DatabaseManager {
             let pool = try DatabasePool(path: path, configuration: config)
             dbPool = pool
             isConnected = true
-            print("[DB] Connected to \(path)")
+            logger.debug("Connected to \(path, privacy: .public)")
         } catch {
-            print("[DB] Error opening database: \(error)")
+            logger.error("Error opening database: \(error)")
             dbPool = nil
             isConnected = false
         }

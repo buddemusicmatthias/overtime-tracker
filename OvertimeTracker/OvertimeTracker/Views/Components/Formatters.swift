@@ -10,12 +10,16 @@ nonisolated enum Formatters {
         return String(format: "%d:%02d", h, m)
     }
 
-    /// Extracts HH:MM from an ISO timestamp like "2026-03-02T09:15:23"
-    static func formatTime(_ isoTimestamp: String) -> String {
-        guard isoTimestamp.count >= 16 else { return isoTimestamp }
-        let startIndex = isoTimestamp.index(isoTimestamp.startIndex, offsetBy: 11)
-        let endIndex = isoTimestamp.index(startIndex, offsetBy: 5)
-        return String(isoTimestamp[startIndex..<endIndex])
+    /// Extracts HH:MM from a time string ("09:15:23") or ISO timestamp ("2026-03-02T09:15:23")
+    static func formatTime(_ timeString: String) -> String {
+        if timeString.count >= 16 {
+            // ISO timestamp: extract HH:MM after the "T"
+            let startIndex = timeString.index(timeString.startIndex, offsetBy: 11)
+            let endIndex = timeString.index(startIndex, offsetBy: 5)
+            return String(timeString[startIndex..<endIndex])
+        }
+        // HH:MM:SS or HH:MM: return first 5 characters
+        return String(timeString.prefix(5))
     }
 
     /// Formats minutes as "Xh YYm" (e.g. 90 → "1h 30m")
