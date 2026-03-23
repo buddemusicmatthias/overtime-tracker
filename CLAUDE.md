@@ -70,3 +70,24 @@ When only `src/` has changed (no Swift changes), the .app doesn't need to be reb
    launchctl kickstart -k gui/$(id -u)/com.overtime-tracker.daemon
    ```
 3. Verify via `tail -f ~/.overtime-tracker/daemon.stderr.log`
+
+## PROJECT_STATUS.yaml
+
+Dieses Repo enthält eine `PROJECT_STATUS.yaml` im Root-Verzeichnis. Aktualisiere sie am Ende jeder Session:
+
+- `last_session`: Heutiges Datum (YYYY-MM-DD)
+- `last_session_summary`: 1-2 Sätze, was in dieser Session passiert ist
+- `next_step`: Was als nächstes ansteht
+- `status`: Nur ändern, wenn sich der Projektstatus tatsächlich geändert hat
+- `blockers`: Aktuelle Blocker auflisten, leere Liste wenn keine
+
+Beispiel-Update:
+
+```yaml
+last_session: 2026-03-22
+last_session_summary: "Windows-Build getestet, zwei Bugs in der Pfadbehandlung gefixt"
+next_step: "Release v1.1 vorbereiten"
+blockers: []
+```
+
+Wichtig: Immer aktualisieren, auch bei kleinen Sessions. Die Datei wird von einem Aggregations-Skript ausgelesen, das den Obsidian-Vault aktualisiert.
