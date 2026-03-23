@@ -214,7 +214,7 @@ final class DashboardViewModel {
     }
 
     /// Aggregates app_daily_summary rows across a date range using raw SQL
-    private func fetchAppRangeSummaries(db: Database, start: String, end: String) throws -> [AppRangeSummary] {
+    private nonisolated func fetchAppRangeSummaries(db: Database, start: String, end: String) throws -> [AppRangeSummary] {
         let rows = try Row.fetchAll(db, sql: """
             SELECT app_name,
                    SUM(active_minutes) AS total_active,
