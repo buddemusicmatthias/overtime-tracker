@@ -128,12 +128,12 @@ final class DashboardViewModel {
     // MARK: - CSV Export
 
     /// Sanitises a string for safe CSV embedding.
-    /// Doubles any embedded quotes, strips leading formula-trigger characters,
-    /// and wraps the result in double quotes.
+    /// Doubles any embedded quotes, prefixes formula-trigger characters with a
+    /// single quote (preventing spreadsheet formula execution), and wraps in double quotes.
     private func sanitizeCSVField(_ value: String) -> String {
         var sanitized = value.replacingOccurrences(of: "\"", with: "\"\"")
-        while let first = sanitized.first, "=+\u{2d}@".contains(first) {
-            sanitized.removeFirst()
+        if let first = sanitized.first, "=+-@".contains(first) {
+            sanitized = "'" + sanitized
         }
         return "\"\(sanitized)\""
     }

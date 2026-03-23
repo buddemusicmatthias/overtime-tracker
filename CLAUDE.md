@@ -69,4 +69,4 @@ When only `src/` has changed (no Swift changes), the .app doesn't need to be reb
    ```bash
    launchctl kickstart -k gui/$(id -u)/com.overtime-tracker.daemon
    ```
-3. Verify via `tail -f /tmp/overtime-tracker.stderr.log`
+3. Verify via `tail -f ~/.overtime-tracker/daemon.stderr.log`
