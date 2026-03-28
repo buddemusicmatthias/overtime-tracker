@@ -71,23 +71,17 @@ When only `src/` has changed (no Swift changes), the .app doesn't need to be reb
    ```
 3. Verify via `tail -f ~/.overtime-tracker/daemon.stderr.log`
 
-## PROJECT_STATUS.yaml
+## Beads (Issue-Tracking)
 
-Dieses Repo enthält eine `PROJECT_STATUS.yaml` im Root-Verzeichnis. Aktualisiere sie am Ende jeder Session:
+Dieses Repo nutzt Beads (`bd`) fuer Issue-Tracking. Regeln:
 
-- `last_session`: Heutiges Datum (YYYY-MM-DD)
-- `last_session_summary`: 1-2 Sätze, was in dieser Session passiert ist
-- `next_step`: Was als nächstes ansteht
-- `status`: Nur ändern, wenn sich der Projektstatus tatsächlich geändert hat
-- `blockers`: Aktuelle Blocker auflisten, leere Liste wenn keine
+- **Session-Start:** `bd ready` checken, verfuegbare Arbeit pruefen
+- **Geplante Arbeit** (Features, Epics, groessere Refactorings): Immer Bead erstellen bevor Code geschrieben wird
+- **Ad-hoc Bugfixes** die in der laufenden Session gefunden UND erledigt werden: Kein Bead noetig, Commit reicht
+- **Nicht sofort fixbare Bugs oder Ideen:** Bead erstellen, damit nichts verloren geht
+- **Session-Ende:** Offene Arbeit als Bead erfassen, `bd dolt push`
+- Bei Arbeit die ueber einen schnellen Fix hinausgeht: Aktiv vorschlagen, Beads zu verwenden
 
-Beispiel-Update:
+## Session-Ende
 
-```yaml
-last_session: 2026-03-22
-last_session_summary: "Windows-Build getestet, zwei Bugs in der Pfadbehandlung gefixt"
-next_step: "Release v1.1 vorbereiten"
-blockers: []
-```
-
-Wichtig: Immer aktualisieren, auch bei kleinen Sessions. Die Datei wird von einem Aggregations-Skript ausgelesen, das den Obsidian-Vault aktualisiert.
+Am Ende jeder Session den `/project-status` Skill ausführen.

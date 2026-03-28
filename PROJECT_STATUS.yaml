@@ -1,0 +1,13 @@
+project: "Overtime Tracker"
+last_session: 2026-03-28
+tech_stack:
+  - python
+  - swift
+  - swiftui
+  - grdb
+  - github-actions
+history:
+  - date: 2026-03-23
+    summary: "PR #4 gemerged: Daemon-Status-Refresh bei Popover-Open, Logging auf os.Logger, CI-Workflow hinzugefügt."
+  - date: 2026-03-28
+    summary: "GitHub Actions CI-Build gefixt (nonisolated-Fix für Swift Concurrency). Globalen /project-status Skill erstellt."
